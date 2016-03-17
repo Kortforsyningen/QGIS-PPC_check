@@ -1,0 +1,6 @@
+Settings file for QGIS DIS pluginn 
+UserID: UserID 
+Project: ProjectID
+ProjectLog: C:\temp\PPC_project_Log.txt
+MainLog: C:\temp\PPC_mail_Log.txt
+GSD: 0.15
