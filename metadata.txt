@@ -10,7 +10,7 @@
 name=PPC_check
 qgisMinimumVersion=2.0
 description=Tool for checking PPC files
-version=0.9
+version=1.0
 author=www.sdfe.dk
 email=anfla@sdfe.dk, mafal@sdfe.dk
 
