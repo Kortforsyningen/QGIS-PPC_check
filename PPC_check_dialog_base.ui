@@ -213,7 +213,7 @@
      </rect>
     </property>
     <property name="text">
-     <string>ETRS89,UTM32,DVR90</string>
+     <string>ETRS89,UTM32N,DVR90</string>
     </property>
     <property name="alignment">
      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>

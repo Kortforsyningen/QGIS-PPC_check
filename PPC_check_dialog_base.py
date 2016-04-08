@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'C:\Users\anfla\.qgis2\python\plugins\PPC_check\PPC_check_dialog_base.ui'
+# Form implementation generated from reading ui file 'PPC_check_dialog_base.ui'
 #
-# Created: Tue Mar 08 10:48:14 2016
+# Created: Thu Apr 07 08:55:58 2016
 #      by: PyQt4 UI code generator 4.10.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -116,7 +116,7 @@ class Ui_PPC_checkDialogBase(object):
         self.checkBoxTilt.setText(_translate("PPC_checkDialogBase", "Tilt", None))
         self.label_6.setText(_translate("PPC_checkDialogBase", "Degrees", None))
         self.lineEditTilt.setText(_translate("PPC_checkDialogBase", "5", None))
-        self.lineEditRef.setText(_translate("PPC_checkDialogBase", "ETRS89,UTM32,DVR90", None))
+        self.lineEditRef.setText(_translate("PPC_checkDialogBase", "ETRS89,UTM32N,DVR90", None))
         self.checkBoxRef.setText(_translate("PPC_checkDialogBase", "Reference system:", None))
         self.checkBoxFile.setText(_translate("PPC_checkDialogBase", "File format conforms to SDFE Standard", None))
         self.checkBoxFormat.setText(_translate("PPC_checkDialogBase", "Feature format conforms to SDFE Standard", None))

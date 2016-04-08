@@ -68,7 +68,7 @@ class PPC_check:
 
         # Declare instance attributes
         self.actions = []
-        self.menu = self.tr(u'&PPC_check')
+        self.menu = self.tr(u'&SDFE-tools')
         # TODO: We are going to let the user set this up in a future iteration
         self.toolbar = self.iface.addToolBar(u'PPC_check')
         self.toolbar.setObjectName(u'PPC_check')
@@ -153,7 +153,8 @@ class PPC_check:
             self.toolbar.addAction(action)
 
         if add_to_menu:
-            self.iface.addPluginToVectorMenu(
+            #self.menu = QMenu( "&SDFE-tools", self.iface.mainWindow().menuBar() )
+            self.iface.addPluginToMenu(
                 self.menu,
                 action)
 
@@ -163,8 +164,12 @@ class PPC_check:
 
     def initGui(self):
         """Create the menu entries and toolbar icons inside the QGIS GUI."""
-
         icon_path = ':/plugins/PPC_check/icon.png'
+        #self.menu = QMenu( "&SDFE-tools", self.iface.mainWindow().menuBar() )
+        #actions = self.iface.mainWindow().menuBar().actions()
+        #lastAction = actions[-1]
+        #self.iface.mainWindow().menuBar().insertMenu( lastAction, self.menu )
+        #self.menu.add_action(self.action)
         self.add_action(
             icon_path,
             text=self.tr(u'Check PPC shp file'),
@@ -174,7 +179,7 @@ class PPC_check:
     def unload(self):
         """Removes the plugin menu item and icon from QGIS GUI."""
         for action in self.actions:
-            self.iface.removePluginVectorMenu(
+            self.iface.removePluginMenu(
                 self.tr(u'&PPC_check'),
                 action)
             self.iface.removeToolBarIcon(action)
@@ -313,8 +318,11 @@ class PPC_check:
         import math
         import datetime
         datotiden = datotiden.replace('-',':')
-
-        DateTime = datetime.datetime.strptime(datotiden,'%Y:%m:%d %H:%M:%S')
+        patterndatetime1 = re.compile("[0-9]{4}:[0-9]{2}:[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]{0,3}")
+        if  patterndatetime1.match(datotiden):
+            DateTime = datetime.datetime.strptime(datotiden,'%Y:%m:%d %H:%M:%S.%f')
+        else:
+            DateTime = datetime.datetime.strptime(datotiden,'%Y:%m:%d %H:%M:%S')
 
         dayOfYear = DateTime.timetuple().tm_yday
         hour = DateTime.hour
@@ -346,6 +354,7 @@ class PPC_check:
 
         self.dlg.lineEditGSD.setText(self.PPC_GSD)
         self.dlg.lineEditCam.setText(os.path.dirname(__file__)+"\\CameraCalibrations\\")
+        #self.dlg.lineEditCam.setText("F:\GEO\DATA\RemoteSensing\Drift\CameraCalibrations")
         self.dlg.pushButton_Input.clicked.connect(self.showFileSelectDialogInput)
         QObject.connect(self.dlg.inShapeA, SIGNAL("currentIndexChanged(QString)" ), self.checkA )
 
@@ -498,6 +507,7 @@ class PPC_check:
 
                                     solVinkelen = self.sunAngle(datotiden,lati,longi)
                                     WantedSUN = float(self.dlg.lineEditSUN.text())
+
                                     if (solVinkelen<WantedSUN):
                                         SUNpass = 'Failed'
                                         SUNfailCount = SUNfailCount+1
