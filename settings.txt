@@ -4,3 +4,6 @@ Project: ProjectID
 ProjectLog: C:\temp\PPC_project_Log.txt
 MainLog: C:\temp\PPC_mail_Log.txt
 GSD: 0.15
+Sun: 25
+Tilt: 5
+CamCal: -
