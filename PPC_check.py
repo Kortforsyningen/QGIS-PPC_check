@@ -72,6 +72,7 @@ class PPC_check:
         # TODO: We are going to let the user set this up in a future iteration
         self.toolbar = self.iface.addToolBar(u'PPC_check')
         self.toolbar.setObjectName(u'PPC_check')
+        self.dlg.pushButton_Input.clicked.connect(self.showFileSelectDialogInput)
 
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
@@ -355,7 +356,7 @@ class PPC_check:
         self.dlg.lineEditGSD.setText(self.PPC_GSD)
         self.dlg.lineEditCam.setText(os.path.dirname(__file__)+"\\CameraCalibrations\\")
         #self.dlg.lineEditCam.setText("F:\GEO\DATA\RemoteSensing\Drift\CameraCalibrations")
-        self.dlg.pushButton_Input.clicked.connect(self.showFileSelectDialogInput)
+
         QObject.connect(self.dlg.inShapeA, SIGNAL("currentIndexChanged(QString)" ), self.checkA )
 
         mapCanvas = self.iface.mapCanvas()
