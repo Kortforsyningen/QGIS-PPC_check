@@ -74,6 +74,28 @@ class PPC_check:
         self.toolbar.setObjectName(u'PPC_check')
         self.dlg.pushButton_Input.clicked.connect(self.showFileSelectDialogInput)
 
+        self.ProjectLog,self.MainLog,self.PPC_GSD,self.Sun,self.Tilt,self.CamCal = self.readSettings
+
+
+
+        if self.CamCal == "-":
+            self.dlg.lineEditCam.setText(os.path.dirname(__file__)+"\\CameraCalibrations\\")
+        #self.dlg.lineEditCam.setText("F:\GEO\DATA\RemoteSensing\Drift\CameraCalibrations")
+        self.dlg.pushButton_Input.clicked.connect(self.showFileSelectDialogInput)
+        QObject.connect(self.dlg.inShapeA, SIGNAL("currentIndexChanged(QString)" ), self.checkA )
+
+        self.dlg.checkBoxPic.setChecked(True)
+        self.dlg.checkBoxGSD.setChecked(True)
+        self.dlg.lineEditGSD.setText(self.PPC_GSD)
+        self.dlg.checkBoxSun.setChecked(True)
+        self.dlg.lineEditSUN.setText(self.Sun)
+        self.dlg.checkBoxFile.setChecked(True)
+        self.dlg.checkBoxFormat.setChecked(True)
+        self.dlg.checkBoxTilt.setChecked(True)
+        self.dlg.lineEditTilt.setText(self.Tilt)
+        self.dlg.checkBoxRef.setChecked(True)
+        self.dlg.lineEditRef.setText('ETRS89,UTM32N,DVR90')
+
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
         """Get the translation for a string using Qt translation API.
@@ -188,7 +210,7 @@ class PPC_check:
         del self.toolbar
 
     def showFileSelectDialogInput(self):
-       fname = QFileDialog.getExistingDirectory( None, 'Open camera calibration directory', str(self.dlg.lineEditCam.text()))
+       fname = QFileDialog.getExistingDirectory( None, 'Open camera calibration directory', os.path.dirname(__file__)+"\\CameraCalibrations\\")
        self.dlg.lineEditCam.setText(fname)
 
     def checkA( self ):
@@ -225,7 +247,13 @@ class PPC_check:
                     MainLog = SplitLine[1].rstrip('\r\n')
                 elif SplitLine[0] == "GSD:":
                     PPC_GSD = SplitLine[1].rstrip('\r\n')
-        return (ProjectLog,MainLog,PPC_GSD)
+                elif SplitLine [0] == "Sun:":
+                    Sun = SplitLine[1].rstrip('\r\n')
+                elif SplitLine [0] == "Tilt:":
+                    Tilt = SplitLine[1].rstrip('\r\n')
+                elif SplitLine [0] == "CamCal:":
+                    CamCal = SplitLine[1].rstrip('\r\n')
+        return (ProjectLog,MainLog,PPC_GSD,Sun,Tilt,CamCal)
 
     def readCameras(self,camdir):
         caminfo=[]
@@ -351,13 +379,7 @@ class PPC_check:
         # Run the dialog event loop
         self.dlg.setWindowTitle(self.tr("Check PPC"))
         # populate layer list
-        self.ProjectLog,self.MainLog,self.PPC_GSD = self.readSettings
 
-        self.dlg.lineEditGSD.setText(self.PPC_GSD)
-        self.dlg.lineEditCam.setText(os.path.dirname(__file__)+"\\CameraCalibrations\\")
-        #self.dlg.lineEditCam.setText("F:\GEO\DATA\RemoteSensing\Drift\CameraCalibrations")
-
-        QObject.connect(self.dlg.inShapeA, SIGNAL("currentIndexChanged(QString)" ), self.checkA )
 
         mapCanvas = self.iface.mapCanvas()
         lyrs = self.iface.legendInterface().layers()
@@ -367,12 +389,7 @@ class PPC_check:
         self.dlg.inShapeA.clear()
         self.dlg.inShapeA.addItems(lyr_list)
 
-        self.dlg.checkBoxGSD.setChecked(True)
-        self.dlg.checkBoxSun.setChecked(True)
-        self.dlg.checkBoxFile.setChecked(True)
-        self.dlg.checkBoxFormat.setChecked(True)
-        self.dlg.checkBoxTilt.setChecked(True)
-        self.dlg.checkBoxRef.setChecked(True)
+
 
         result = self.dlg.exec_()
         # See if OK was pressed
@@ -528,12 +545,15 @@ class PPC_check:
                                     Time1 = feat['TimeUTC']
                                     Time2 = feat['TimeCET']
                                     ImageID = feat['ImageID']
-                                    if patternImageID.match(ImageID):
-                                        FeatIIDFailCount = 0
-                                        NameFormat1 = '  ImageID-OK  '
+                                    if self.dlg.checkBoxPic.isChecked():
+                                        if patternImageID.match(ImageID):
+                                            FeatIIDFailCount = 0
+                                            NameFormat1 = '  ImageID-OK  '
+                                        else:
+                                            FeatIIDFailCount = FeatIIDFailCount+1
+                                            NameFormat1 = '  ImageID-Fail  '
                                     else:
-                                        FeatIIDFailCount = FeatIIDFailCount+1
-                                        NameFormat1 = '  ImageID-Fail  '
+                                        NameFormat1 = '  ImageID-not checked  '
                                     if patternTime.match(Time1):
                                         FeatTimeFailCount = 0
                                         if patternTime.match(Time2):
