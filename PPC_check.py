@@ -470,6 +470,7 @@ class PPC_check:
                         FeatCamFailCount = 0
                         FeatOrientationFail = 0
                         kappacount = 0
+                        fiveinarow = 0
 
                         for feat in selection:
 
@@ -478,7 +479,7 @@ class PPC_check:
                             ImageID = feat['ImageID']
 
                             # General checks
-                            producent = str(feat['PRODUCER'])
+                            producent = str(feat['Producer'])
                             kommentar = str(feat['COMMENT_CO'])
                             Kamera = feat['CameraID']
                             fundet = False
@@ -540,6 +541,7 @@ class PPC_check:
 
                             #check name format
                             NameFormat = 'Not Checked'
+                            Orientation = ''
                             if (self.dlg.checkBoxFormat.isChecked()):					
                                 try:
                                     patternImageID = re.compile("[0-9]{4}_[0-9]{2}_[0-9]{2}_\d+_[0-9]{4}")
@@ -610,6 +612,7 @@ class PPC_check:
                                     return
                                 FeatFailCount = FeatIIDFailCount + FeatTimeFailCount + FeatCamFailCount
                                 NameFormat = NameFormat1+NameFormat2 + NameFormat3
+                                Orientation = NameFormat4
 
                             #Check Overlap
                             #if (self.dlg.checkBoxOverlap.isChecked()):
@@ -659,7 +662,7 @@ class PPC_check:
                             newfeat = QgsFeature()
                             newfeat.setGeometry(QgsGeometry.fromPoint(Geometri))
                             try:
-                                newfeat.setAttributes([ImageID, GSDpass, solVinkelen, SUNpass,"",TILTpass,REFpass,NameFormat,NameFormat4])
+                                newfeat.setAttributes([ImageID, GSDpass, solVinkelen, SUNpass,"",TILTpass,REFpass,NameFormat,Orientation])
                             except (RuntimeError, TypeError, NameError, ValueError):
                                 QMessageBox.information(None, "General Error", "PPC Format errors found, exiting!")
                                 return
@@ -699,10 +702,15 @@ class PPC_check:
                             rapporten = rapporten + "reference system not checked \n"
 
                         if (self.dlg.checkBoxFormat.isChecked()):
+                            rapporten = rapporten + str(FeatFailCount) + " name format errors \n"
+                        else:
+                            rapporten = rapporten + "name format not checked \n"
+
+                        if (self.dlg.checkBoxFormat.isChecked()):
                             if fiveinarow == 1:
                                 rapporten = rapporten + str(FeatOrientationFail) + " suspect orientation formats \n OBS - 5 suspect kappa formats in a row \n"
                             else:
-                                rapporten = rapporten + str(FeatFailCount) + " name format errors \n"
+                                rapporten = rapporten + str(FeatOrientationFail) + " suspect orientation formats \n"
                         else:
                             rapporten = rapporten + "name format not checked \n"
 
