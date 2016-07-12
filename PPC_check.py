@@ -406,8 +406,8 @@ class PPC_check:
             allLayers = canvas.layers()
 
             try:
-
                 count = 0
+
                 for i in allLayers:
                     #QMessageBox.information(None, "status",i.name())
                     if(i.name() == inputFilNavn):
@@ -454,7 +454,8 @@ class PPC_check:
                                             QgsField("Overlap", QVariant.String),
                                             QgsField("Tilt", QVariant.String),
                                             QgsField("RefSys", QVariant.String),
-                                            QgsField("NameFormat", QVariant.String)])
+                                            QgsField("NameFormat", QVariant.String),
+                                            QgsField("Orientation", QVariant.String)])
 
                         if self.dlg.useSelectedA.isChecked():
                             selection = layer.selectedFeatures()
@@ -467,6 +468,8 @@ class PPC_check:
                         FeatIIDFailCount = 0
                         FeatTimeFailCount = 0
                         FeatCamFailCount = 0
+                        FeatOrientationFail = 0
+                        kappacount = 0
 
                         for feat in selection:
 
@@ -537,11 +540,14 @@ class PPC_check:
 
                             #check name format
                             NameFormat = 'Not Checked'
-                            if (self.dlg.checkBoxFormat.isChecked()):
+                            if (self.dlg.checkBoxFormat.isChecked()):					
                                 try:
                                     patternImageID = re.compile("[0-9]{4}_[0-9]{2}_[0-9]{2}_\d+_[0-9]{4}")
                                     patternTime = re.compile("[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}.{0,1}[0-9]{0,3}")
+                                    patternKappa = re.compile("-?[\d]+.[0-9]{3}[0]")
 
+                                    kap = feat['Kappa']
+                                    kappa  = "%.4f" % float(kap)
                                     Time1 = feat['TimeUTC']
                                     Time2 = feat['TimeCET']
                                     ImageID = feat['ImageID']
@@ -576,6 +582,28 @@ class PPC_check:
                                     else:
                                         FeatCamFailCount = FeatCamFailCount+1
                                         NameFormat3 = '  CameraID-Fail  '
+
+                                    if kappacount > 5:
+                                        fiveinarow = 1
+                                    else: pass
+
+                                    if len(str(kappa)) >= 9:
+                                        if patternKappa.match(kappa):
+                                            FeatOrientationFail = FeatOrientationFail+1
+                                            kappacount = kappacount + 1
+                                            NameFormat4 = '  Kappa-Value length  '
+                                        else:
+                                            NameFormat4 = ''
+                                            kappacount = 0
+                                    else:
+                                        if patternKappa.match(kappa):
+                                            FeatOrientationFail = FeatOrientationFail+1
+                                            kappacount = kappacount +1
+                                            NameFormat4 = '  Kappa-maybe truncated  '
+                                        else:
+                                            NameFormat4 = ''
+                                            kappacount = 0
+
 
                                 except (RuntimeError, TypeError, NameError, ValueError):
                                     QMessageBox.information(None, "General Error", "Error in name format!")
@@ -631,7 +659,7 @@ class PPC_check:
                             newfeat = QgsFeature()
                             newfeat.setGeometry(QgsGeometry.fromPoint(Geometri))
                             try:
-                                newfeat.setAttributes([ImageID, GSDpass, solVinkelen, SUNpass,"",TILTpass,REFpass,NameFormat])
+                                newfeat.setAttributes([ImageID, GSDpass, solVinkelen, SUNpass,"",TILTpass,REFpass,NameFormat,NameFormat4])
                             except (RuntimeError, TypeError, NameError, ValueError):
                                 QMessageBox.information(None, "General Error", "PPC Format errors found, exiting!")
                                 return
@@ -671,7 +699,10 @@ class PPC_check:
                             rapporten = rapporten + "reference system not checked \n"
 
                         if (self.dlg.checkBoxFormat.isChecked()):
-                            rapporten = rapporten + str(FeatFailCount) + " name format errors \n"
+                            if fiveinarow == 1:
+                                rapporten = rapporten + str(FeatOrientationFail) + " suspect orientation formats \n OBS - 5 suspect kappa formats in a row \n"
+                            else:
+                                rapporten = rapporten + str(FeatFailCount) + " name format errors \n"
                         else:
                             rapporten = rapporten + "name format not checked \n"
 
