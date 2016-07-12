@@ -10,7 +10,7 @@
 name=PPC_check
 qgisMinimumVersion=2.0
 description=Tool for checking PPC files
-version=1.1
+version=1.2
 author=www.sdfe.dk
 email=anfla@sdfe.dk, mafal@sdfe.dk
 
@@ -24,6 +24,7 @@ repository=bitbucket
 
 # Uncomment the following line and add your changelog:
 changelog=
+    2016-07-12 1.2 Check for suspect kappa values
     2016-05-23 1.1 Ability to skip dheck of image naming
 
 # Tags are comma separated with spaces allowed
