@@ -72,7 +72,7 @@ class PPC_check:
         # TODO: We are going to let the user set this up in a future iteration
         self.toolbar = self.iface.addToolBar(u'PPC_check')
         self.toolbar.setObjectName(u'PPC_check')
-        self.dlg.pushButton_Input.clicked.connect(self.showFileSelectDialogInput)
+        #self.dlg.pushButton_Input.clicked.connect(self.showFileSelectDialogInput)
 
         self.ProjectLog,self.MainLog,self.PPC_GSD,self.Sun,self.Tilt,self.CamCal = self.readSettings
 
