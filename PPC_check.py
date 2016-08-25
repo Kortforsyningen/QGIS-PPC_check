@@ -548,8 +548,8 @@ class PPC_check:
                                     patternTime = re.compile("[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}.{0,1}[0-9]{0,3}")
                                     patternKappa = re.compile("-?[\d]+.[0-9]{3}[0]")
 
-                                    kap = feat['Kappa']
-                                    kappa  = "%.4f" % float(kap)
+                                    kappa = feat['Kappa']
+
                                     Time1 = feat['TimeUTC']
                                     Time2 = feat['TimeCET']
                                     ImageID = feat['ImageID']
@@ -589,7 +589,13 @@ class PPC_check:
                                         fiveinarow = 1
                                     else: pass
 
-                                    if len(str(kappa)) >= 9:
+                                    if ((str(kappa) == "NULL") or (str(kappa) == "")):
+                                        #QMessageBox.information(None, "General Error", "1")
+                                        NameFormat4 = ' '
+                                        kappacount = 0
+                                        pass
+                                    elif len(str(kappa)) >= 9:
+                                        kappa = "%.4f" % float(kappa)
                                         if patternKappa.match(kappa):
                                             FeatOrientationFail = FeatOrientationFail+1
                                             kappacount = kappacount + 1
@@ -598,12 +604,13 @@ class PPC_check:
                                             NameFormat4 = ''
                                             kappacount = 0
                                     else:
+                                        kappa = "%.4f" % float(kappa)
                                         if patternKappa.match(kappa):
                                             FeatOrientationFail = FeatOrientationFail+1
                                             kappacount = kappacount +1
                                             NameFormat4 = '  Kappa-maybe truncated  '
                                         else:
-                                            NameFormat4 = ''
+                                            NameFormat4 = ' '
                                             kappacount = 0
 
 
