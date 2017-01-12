@@ -16,8 +16,8 @@ email=anfla@sdfe.dk, mafal@sdfe.dk
 
 about=PPC-check is the first module in the line of QGIS tools made to ease the job of quality checking data to the Danish national mapping agency (SDFE). PPC-Check will check formatting of the PPC file, formatting of the attributes and check base parameters such as GSD, sun angle etc.
 
-tracker=bitbucket
-repository=bitbucket
+tracker=https://github.com/Kortforsyningen/QGIS-PPC_check/issues
+repository=https://github.com/Kortforsyningen/QGIS-PPC_check
 # End of mandatory metadata
 
 # Recommended items:
@@ -30,7 +30,7 @@ changelog=
 # Tags are comma separated with spaces allowed
 tags=
 
-homepage=
+homepage=https://github.com/Kortforsyningen/QGIS-PPC_check
 category=Vector
 icon=icon.png
 # experimental flag
