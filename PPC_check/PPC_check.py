@@ -360,17 +360,29 @@ class PPC_check:
 
                         # Check fileformat conformity
                         if self.dlg.checkBoxFile.isChecked():
+                            n=0
                             features = layer.getFeatures()
                             f = features.next()
-                            listtest = [c.name() for c in f.fields().toList()]
-                            listtrue = ['ImageID','Easting','Northing','Height','Omega','Phi','Kappa','TimeUTC','CameraID','Height_Eli','TimeCET','ReferenceS','Producer','Level','Comment_Co','Comment_GS','Status']
-                            ld1 = list(set(listtrue)-set(listtest))
-                            ld2 = list(set(listtest)-set(listtrue))
-                            if ld1 == []:
+                            AttributesList = [c.name() for c in f.fields().toList()]
+                            if self.dlg.radioButton.isChecked():
+                                PossibleValues = ['ImageID','Easting','Northing','Height','Omega','Phi','Kappa','Direction','TimeUTC','CameraID','EstAcc','Height_Eli','TimeCET','ReferenceS','Producer','Level','Comment_Co','Comment_GS','Status','GSD']
+                            elif self.dlg.radioButton_2.isChecked():
+                                PossibleValues = ['ImageID','Easting','Northing','Height','Omega','Phi','Kappa','TimeUTC','CameraID','Height_Eli','TimeCET','ReferenceS','Producer','Level','Comment_Co','Comment_GS','Status','GSD']
+
+                            for s in PossibleValues:
+                                if s in AttributesList:
+                                    n = n + 1
+                            ld1 = len(AttributesList)-n
+                            ld2 = n-len(AttributesList)
+                            if ld1 == 0:
                                 NameFailCount = 0
                                 #QMessageBox.information(None, "status", "File conforms to SDFE standard!")
-                            elif len(listtest) != len(listtrue):
-                                QMessageBox.information(None, "status", "Files is missing some attributes. \n Check that the following fields are pressent in the attributes table header: \n 'ImageID','Easting','Northing','Height','Omega','Phi','Kappa','TimeUTC','CameraID','Height_Eli','TimeCET','ReferenceS','Producer','Level','Comment_Co','Comment_GS','Status'" )
+                            elif len(AttributesList) != n:
+                                if self.dlg.radioButton.isChecked():
+                                    QMessageBox.information(None, "status", "Files is missing some attributes. \n Check that the following fields are pressent in the attributes table header: \n 'ImageID','Easting','Northing','Height','Omega','Phi','Kappa','Direction','TimeUTC','CameraID','EstAcc','Height_Eli','TimeCET','ReferenceS','Producer','Level','Comment_Co','Comment_GS','Status','GSD'" )
+                                elif self.dlg.radioButton_2.isChecked():
+                                    QMessageBox.information(None, "status",
+                                                            "Files is missing some attributes. \n Check that the following fields are pressent in the attributes table header: \n 'ImageID','Easting','Northing','Height','Omega','Phi','Kappa','TimeUTC','CameraID','Height_Eli','TimeCET','ReferenceS','Producer','Level','Comment_Co','Comment_GS','Status'")
                                 return
                             else:
                                 NameFailCount = len(ld1)
@@ -494,7 +506,6 @@ class PPC_check:
                                     patternKappa = re.compile("-?[\d]+.[0-9]{3}[0]")
 
                                     kappa = feat['Kappa']
-
                                     Time1 = feat['TimeUTC']
                                     Time2 = feat['TimeCET']
                                     ImageID = feat['ImageID']
@@ -507,9 +518,9 @@ class PPC_check:
                                             NameFormat1 = '  ImageID-Fail  '
                                     else:
                                         NameFormat1 = '  ImageID-not checked  '
-                                    if patternTime.match(Time1):
+                                    if patternTime.match(str(Time1)):
                                         FeatTimeFailCount = 0
-                                        if patternTime.match(Time2):
+                                        if patternTime.match(str(Time2)):
                                             FeatTimeFailCount = 0
                                             NameFormat2 = '  TimeCET,TimeUTC-OK  '
                                         else:
@@ -574,26 +585,50 @@ class PPC_check:
                             #Check Tilt angles
                             TILTpass = 'Not validated'
                             if (self.dlg.checkBoxTilt.isChecked()):
-                                try:
-                                    Omega = feat['Omega']
-                                    Phi = feat['Phi']
-                                    MaxAcceptedTilt = float(self.dlg.lineEditTilt.text())
+                                if (self.dlg.radioButton.isChecked()):
+                                    Dir = str(feat['Direction'])
+                                    if Dir=="T":
+                                        try:
+                                            Omega = feat['Omega']
+                                            Phi = feat['Phi']
+                                            MaxAcceptedTilt = float(self.dlg.lineEditTilt.text())
 
-                                    Level = int(feat['Level'])
-                                    MaxAcceptedTilt = float(self.dlg.lineEditTilt.text())
-                                    if ((str(Omega) == "NULL") or (str(Phi)=="NULL")):
-                                        TILTpass = 'no info'
-                                        if ( Level > 1):
-                                            TILTfailCount = TILTfailCount+1
+                                            Level = int(feat['Level'])
+                                            MaxAcceptedTilt = float(self.dlg.lineEditTilt.text())
+                                            if ((str(Omega) == "NULL") or (str(Phi)=="NULL")):
+                                                TILTpass = 'no info'
+                                                if ( Level > 1):
+                                                    TILTfailCount = TILTfailCount+1
 
-                                    elif ((Omega > MaxAcceptedTilt) or (Phi > MaxAcceptedTilt)):
-                                        TILTpass = 'Failed'
-                                        TILTfailCount = TILTfailCount+1
-                                    else:
-                                        TILTpass = 'OK'
-                                except (RuntimeError, TypeError, NameError, ValueError):
-                                    QMessageBox.information(None, "General Error", "Error in tilt angles, exiting!")
-                                    return
+                                            elif ((Omega > MaxAcceptedTilt) or (Phi > MaxAcceptedTilt)):
+                                                TILTpass = 'Failed'
+                                                TILTfailCount = TILTfailCount+1
+                                            else:
+                                                TILTpass = 'Nadir - OK'
+                                        except (RuntimeError, TypeError, NameError, ValueError):
+                                            QMessageBox.information(None, "General Error", "Error in tilt angles, exiting!")
+                                            return
+                                elif (self.dlg.radioButton_2.isChecked()):
+                                    try:
+                                        Omega = feat['Omega']
+                                        Phi = feat['Phi']
+                                        MaxAcceptedTilt = float(self.dlg.lineEditTilt.text())
+
+                                        Level = int(feat['Level'])
+                                        MaxAcceptedTilt = float(self.dlg.lineEditTilt.text())
+                                        if ((str(Omega) == "NULL") or (str(Phi) == "NULL")):
+                                            TILTpass = 'no info'
+                                            if (Level > 1):
+                                                TILTfailCount = TILTfailCount + 1
+
+                                        elif ((Omega > MaxAcceptedTilt) or (Phi > MaxAcceptedTilt)):
+                                            TILTpass = 'Failed'
+                                            TILTfailCount = TILTfailCount + 1
+                                        else:
+                                            TILTpass = 'OK'
+                                    except (RuntimeError, TypeError, NameError, ValueError):
+                                        QMessageBox.information(None, "General Error", "Error in tilt angles, exiting!")
+                                        return
 
                             #Check Reference system
                             REFpass = 'Not validated'
