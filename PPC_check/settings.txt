@@ -7,3 +7,5 @@ GSD: 0.15
 Sun: 25
 Tilt: 5
 CamCal: -
+ImageDir: -
+DBImageDir: -
