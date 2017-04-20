@@ -27,6 +27,8 @@ from PyQt4.QtGui import *
 from qgis.core import *
 from qgis.utils import *
 import ntpath
+from processing.core.Processing import Processing
+from processing.tools import *
 from osgeo import gdal, osr
 import re, os
 # Initialize Qt resources from file resources.py
@@ -80,7 +82,9 @@ class PPC_check:
         self.dlg.pushButton_InputPPC.clicked.connect(self.showFileSelectDialogInputPPC)
         self.dlg.pushButton_InputImage.clicked.connect(self.showFileSelectDialogInputImage)
         self.dlg.pushButton_InputDB.clicked.connect(self.showFileSelectDialogInputDB)
+        self.dlg.pushButton_uploadDB.clicked.connect(self.showFileSelectDialogUploadDB)
         QObject.connect(self.dlg.inShapeAPPC, SIGNAL("currentIndexChanged(QString)" ), self.checkA )
+        QObject.connect(self.dlg.inShapeDB, SIGNAL("currentIndexChanged(QString)" ), self.checkA )
         QObject.connect(self.dlg.inShapeAImage, SIGNAL("currentIndexChanged(QString)" ), self.checkA )
 
         self.dlg.checkBoxPic.setChecked(True)
@@ -100,6 +104,7 @@ class PPC_check:
         self.dlg.radioButtonPPC_Nadir.setChecked(True)
         self.dlg.radioButtonImage_Nadir.setChecked(True)
         self.dlg.radioButton8000.setChecked(True)
+        self.dlg.lineEditDBImageDir.setText('C:/Users/B020736/Documents/Test_Oblique_2017/Image_TIF')
 
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
@@ -178,8 +183,14 @@ class PPC_check:
        fname = QFileDialog.getExistingDirectory( None, 'Open image directory', os.path.dirname(__file__))
        self.dlg.lineEditDBImageDir.setText(fname)
 
+    def showFileSelectDialogUploadDB(self):
+        pass
+       #fname = QFileDialog.getExistingDirectory( None, 'Open image directory', os.path.dirname(__file__))
+       #self.dlg.lineEditDBImageDir.setText(fname)
+
     def checkA( self ):
         inputFilNavnPPC = unicode( self.dlg.inShapeAPPC.currentText() )
+        inputFilNavnDB = unicode( self.dlg.inShapeDB.currentText() )
         inputFilNavnImage = unicode( self.dlg.inShapeAImage.currentText() )
         canvas = self.iface.mapCanvas()
         allLayers = canvas.layers()
@@ -195,6 +206,11 @@ class PPC_check:
                     self.dlg.useSelectedAImage.setCheckState( Qt.Checked )
                 else:
                     self.dlg.useSelectedAImage.setCheckState( Qt.Unchecked )
+            elif(i.name() == inputFilNavnDB):
+                if i.selectedFeatureCount() != 0:
+                    self.dlg.useSelectedDB.setCheckState( Qt.Checked )
+                else:
+                    self.dlg.useSelectedDB.setCheckState( Qt.Unchecked )
 
     def changed(self, inputLayer):
         changedLayer = self.dlg.getVectorLayerByNam(inputLayer)
@@ -418,7 +434,8 @@ class PPC_check:
         self.dlg.inShapeAPPC.addItems(lyr_list)
         self.dlg.inShapeAImage.clear()
         self.dlg.inShapeAImage.addItems(lyr_list)
-
+        self.dlg.inShapeDB.clear()
+        self.dlg.inShapeDB.addItems(lyr_list)
 
         result = self.dlg.exec_()
         currentIndex = self.dlg.tabWidget.currentIndex()
@@ -460,14 +477,14 @@ class PPC_check:
                                         n = n + 1
                                 ld1 = len(AttributesList)-n
                                 ld2 = n-len(AttributesList)
-                                if ld1 == 0:
+                                if ld1 >= 0:
                                     NameFailCount = 0
                                     #QMessageBox.information(None, "status", "File conforms to SDFE standard!")
-                                elif len(AttributesList) != n:
+                                elif len(AttributesList) < n:
                                     if self.dlg.radioButtonPPC_ob.isChecked():
-                                        QMessageBox.information(None, "status", "Files is missing some attributes. \n Check that the following fields are pressent in the attributes table header: \n 'ImageID','Easting','Northing','Height','Omega','Phi','Kappa','Direction','TimeUTC','CameraID','EstAcc','Height_Eli','TimeCET','ReferenceS','Producer','Level','Comment_Co','Comment_GS','Status','GSD'" )
+                                        QMessageBox.information(None, "status", "Files is missing some attributes. \n Check that the following fields are pressent in the attributes table header: \n 'ImageID','Easting','Northing','Height','Omega','Phi','Kappa','Direction','TimeUTC','CameraID','EstAcc','Height_Eli',\n'TimeCET','ReferenceS','Producer','Level','Comment_Co','Comment_GS','Status','GSD'" )
                                     elif self.dlg.radioButtonPPC_Nadir.isChecked():
-                                        QMessageBox.information(None, "status", "Files is missing some attributes. \n Check that the following fields are pressent in the attributes table header: \n 'ImageID','Easting','Northing','Height','Omega','Phi','Kappa','TimeUTC','CameraID','Height_Eli','TimeCET','ReferenceS','Producer','Level','Comment_Co','Comment_GS','Status'")
+                                        QMessageBox.information(None, "status", "Files is missing some attributes. \n Check that the following fields are pressent in the attributes table header: \n 'ImageID','Easting','Northing','Height','Omega','Phi','Kappa','TimeUTC','CameraID','Height_Eli',\n'TimeCET','ReferenceS','Producer','Level','Comment_Co','Comment_GS','Status'")
                                     return
                                 else:
                                     NameFailCount = len(ld1)
@@ -500,6 +517,14 @@ class PPC_check:
 
                             if self.dlg.useSelectedAPPC.isChecked():
                                 selection = layer.selectedFeatures()
+                            else:
+                                selection = layer.getFeatures()
+                            cc=0
+                            for feat in selection:
+                                cc+=1
+
+                            if self.dlg.useSelectedAPPC.isChecked():
+                                selection = layer.selectedFeatures()
                                 QMessageBox.information(None, "status", "checking selected features")
                             else:
                                 selection = layer.getFeatures()
@@ -512,9 +537,9 @@ class PPC_check:
                             FeatOrientationFail = 0
                             kappacount = 0
                             fiveinarow = 0
-
+                            nn=0
                             for feat in selection:
-
+                                nn+=1
                                 geom = feat.geometry().centroid()
                                 Geometri = geom.asPoint()
                                 ImageID = feat['ImageID']
@@ -585,7 +610,8 @@ class PPC_check:
                                 Orientation = ''
                                 if (self.dlg.checkBoxFormat.isChecked()):
                                     try:
-                                        patternImageID = re.compile("[0-9]{4}_[0-9]{2}_[0-9]{2}_\d+_[0-9]{4}")
+                                        patternImageIDGeoDK = re.compile("[0-9]{4}_[0-9]{2}_[0-9]{2}_\d+_[0-9]{4}")
+                                        patternImageIDoblique = re.compile("[0-9]{4}_[0-9]{2}_[0-9]{2}_\d+_[0-9]{4}_[0-9]{8}")
                                         patternTime = re.compile("[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}.{0,1}[0-9]{0,3}")
                                         patternKappa = re.compile("-?[\d]+.[0-9]{3}[0]")
 
@@ -593,6 +619,10 @@ class PPC_check:
                                         Time1 = feat['TimeUTC']
                                         Time2 = feat['TimeCET']
                                         ImageID = feat['ImageID']
+                                        if self.dlg.radioButtonPPC_Nadir.isChecked():
+                                            patternImageID=patternImageIDGeoDK
+                                        elif self.dlg.radioButtonPPC_ob.isChecked():
+                                            patternImageID=patternImageIDoblique
                                         if self.dlg.checkBoxPic.isChecked():
                                             if patternImageID.match(ImageID):
                                                 FeatIIDFailCount = 0
@@ -692,6 +722,8 @@ class PPC_check:
                                             except (RuntimeError, TypeError, NameError, ValueError):
                                                 QMessageBox.information(None, "General Error", "Error in tilt angles, exiting!")
                                                 return
+                                        else:
+                                            pass
                                     elif (self.dlg.radioButtonPPC_Nadir.isChecked()):
                                         try:
                                             Omega = feat['Omega']
@@ -728,6 +760,107 @@ class PPC_check:
                                     except (RuntimeError, TypeError, NameError, ValueError):
                                         QMessageBox.information(None, "General Error", "Error in Reference format, exiting!")
                                         return
+
+                                # Check for voids
+                                if (self.dlg.checkBoxVoids.isChecked()):
+                                    if self.dlg.radioButtonPPC_Nadir.isChecked():
+                                        QMessageBox.information(None, "General Error", "Void-check option is only for Oblique!")
+                                        break
+                                    elif self.dlg.radioButtonPPC_ob.isChecked():
+                                        if nn==cc:
+                                            fname=inputLayer
+                                            try:
+                                                fname
+                                            except NameError:
+                                                self.dlg.close()
+                                            else:
+                                                pass
+                                            localpath = os.getcwd()
+                                            if os.path.exists(localpath + '\\dissolved_lyr.shp'):
+                                                try:
+                                                    QgsMapLayerRegistry.instance().removeMapLayer(lyr1)
+                                                except:
+                                                    pass
+                                                QgsVectorFileWriter.deleteShapeFile(localpath + '\\dissolved_lyr.shp')
+                                            if os.path.exists(localpath + '\\err_lyr.shp'):
+                                                try:
+                                                    QgsMapLayerRegistry.instance().removeMapLayer(err_layer)
+                                                except:
+                                                    pass
+                                                QgsVectorFileWriter.deleteShapeFile(localpath + '\\err_lyr.shp')
+
+                                            lyr = QgsVectorLayer(fname, 'Footprints', 'ogr')
+                                            general.runalg("qgis:dissolve", lyr, "False", "Direction",
+                                                           localpath + '\\dissolved_lyr.shp')
+                                            lyr1 = QgsVectorLayer(localpath + '\\dissolved_lyr.shp', 'dissolved_layer', 'ogr')
+                                            landuse = {"N": ("yellow", "North"), "S": ("darkcyan", "South"),
+                                                       "E": ("green", "East"),
+                                                       "W": ("blue", "West"), "T": ("red", "Nadir")}
+
+                                            categories = []
+                                            for NSEW, (color, label) in landuse.items():
+                                                sym = QgsSymbolV2.defaultSymbol(lyr1.geometryType())
+                                                sym.setColor(QColor(color))
+                                                category = QgsRendererCategoryV2(NSEW, sym, label)
+                                                categories.append(category)
+
+                                            field = "Direction"
+                                            renderer = QgsCategorizedSymbolRendererV2(field, categories)
+                                            lyr1.setRendererV2(renderer)
+                                            crs = lyr1.crs()
+                                            crs.createFromId(25832)
+                                            lyr1.setCrs(crs)
+                                            QgsMapLayerRegistry.instance().addMapLayer(lyr1)
+                                            #            crs = self.utils.iface.activeLayer().crs().authid()
+                                            features = lyr1.getFeatures()
+                                            layer1 = QgsVectorLayer('Polygon', 'poly1', "memory")
+                                            layer2 = QgsVectorLayer('Polygon', 'poly2', "memory")
+                                            pr1 = layer1.dataProvider()
+                                            pr2 = layer2.dataProvider()
+                                            poly1 = QgsFeature()
+                                            poly2 = QgsFeature()
+                                            for f in features:
+                                                vertices = f.geometry().asPolygon()
+                                                dir = f.attribute("Direction")
+                                                n = len(vertices)
+                                                if n == 2:
+                                                    poly1.setGeometry(QgsGeometry.fromPolygon([vertices[0]]))
+                                                    poly2.setGeometry(QgsGeometry.fromPolygon([vertices[1]]))
+                                                    pr1.addFeatures([poly1])
+                                                    pr2.addFeatures([poly2])
+                                                    layer1.updateExtents()
+                                                    layer2.updateExtents()
+                                                    QgsMapLayerRegistry.instance().addMapLayers([layer2])
+
+                                            general.runalg('qgis:addfieldtoattributestable', layer2, 'Direction', 2, 10, 7,
+                                                           'err_lyr.shp')
+                                            err_layer = QgsVectorLayer('C:\\OSGeo4W64\\bin\\err_lyr.shp', 'Error_layer', 'ogr')
+                                            # --------------------------------------------------------------------------
+                                            # only applicable for test case footprint file should be in crs 25832
+                                            # crs = err_layer.crs()
+                                            # crs.createFromId(4326)
+                                            # err_layer.setCrs(crs)
+                                            #
+                                            # ------------------------------------------------------------------------------
+                                            QgsMapLayerRegistry.instance().addMapLayers([err_layer])
+                                            QgsMapLayerRegistry.instance().removeMapLayer(layer2)
+
+                                            num = 0
+                                            features = lyr1.getFeatures()
+                                            for f in features:
+                                                vertices = f.geometry().asPolygon()
+                                                dir = f.attribute("Direction")
+                                                n = len(vertices)
+                                                if n == 2:
+                                                    num = num + 1
+                                                    # print dir,n,num
+                                                    err_layer.startEditing()
+                                                    err_layer.changeAttributeValue((num - 1), 0, dir)
+                                                    err_layer.commitChanges()
+                                            rapp = "<center>Check Complete:<center>\n" + "\n Errors, if there are any, are in the \"Error_layer\"\n with their layer orientation in the attribute table\n"
+
+                                            QMessageBox.information(self.iface.mainWindow(), 'Footprint_Void_Check', rapp)
+
 
                                 # add a feature
                                 newfeat = QgsFeature()
@@ -806,229 +939,360 @@ class PPC_check:
 
                 canvas = self.iface.mapCanvas()
                 allLayers = canvas.layers()
-
                 try:
                     count = 0
+                    #for i in allLayers:
+                    #    if (i.name() == inputFilNavn):
+                    #        layer = i
 
-                    for i in allLayers:
-                        if (i.name() == inputFilNavn):
-                            layer = i
+                    # create virtual layer
+                    vl = QgsVectorLayer("Point", "Image-check: " + str(ntpath.basename(ImageDirPath)), "memory")
+                    pr = vl.dataProvider()
 
-                            # create virtual layer
-                            vl = QgsVectorLayer("Point", "Image-check: " + str(ntpath.basename(ImageDirPath)), "memory")
-                            pr = vl.dataProvider()
+                    ImDFail = 0
+                    ImFFail = 0
+                    SizeFailCount = 0
+                    CompFailCount = 0
+                    # vl.startEditing()
+                    # add fields
+                    pr.addAttributes([QgsField("ImageID", QVariant.String),
+                                      QgsField("Dirver", QVariant.String),
+                                      QgsField("Image Size", QVariant.String),
+                                      QgsField("Pixel Sixe", QVariant.String),
+                                      QgsField("Format", QVariant.String)])
 
-                            ImDFail = 0
-                            ImFFail = 0
-                            SizeFailCount = 0
-                            CompFailCount = 0
-                            # vl.startEditing()
-                            # add fields
-                            pr.addAttributes([QgsField("ImageID", QVariant.String),
-                                              QgsField("Dirver", QVariant.String),
-                                              QgsField("Image Size", QVariant.String),
-                                              QgsField("Pixel Sixe", QVariant.String),
-                                              QgsField("Format", QVariant.String)])
+                    #if self.dlg.useSelectedAImage.isChecked():
+                    #    selection = layer.selectedFeatures()
+                    #    QMessageBox.information(None, "status", "checking selected features")
+                    #else:
+                    #    selection = layer.getFeatures()
+                    #    QMessageBox.information(None, "status", "checking all features")
 
-                            if self.dlg.useSelectedAImage.isChecked():
-                                selection = layer.selectedFeatures()
-                                QMessageBox.information(None, "status", "checking selected features")
-                            else:
-                                selection = layer.getFeatures()
-                                QMessageBox.information(None, "status", "checking all features")
+                    #for feat in selection:
+                    #    geom = feat.geometry().centroid()
+                    #    Geometri = geom.asPoint()
 
-                            for feat in selection:
-                                geom = feat.geometry().centroid()
-                                Geometri = geom.asPoint()
+                    ImageDriver = "Image Driver not checked"
+                    ImageSize = "Image size not checked"
+                    ImageNameCheck = "Image Name not Checked"
+                    ImageFormat = "Image format not checked"
+                    resolution = "resolution not checked"
+                    ImDOK = 0
+                    ImDFail = 0
+                    ImFOK = 0
+                    ImFFail = 0
+                    SizeFailCount = 0
+                    CompFailCount = 0
+                    #load data (oblique or Nadir):
+                    if self.dlg.radioButtonImage_ob.isChecked():
+                        QMessageBox.information(None, "OBS - Oblique dataset", "Processing may take a couple of minutes!")
+                        ImageDirPath = ImageDirPath.replace("\\", "/")
+                        tt = os.listdir(ImageDirPath + "/001/0001")
+                        if tt[0].endswith('.jpg'):
+                            result = self.readdata(ImageDirPath)
+                        elif tt[0].endswith('.tif'):
+                            result = self.readdata(ImageDirPath)
+                    elif self.dlg.radioButtonImage_Nadir.isChecked():
+                        resulttemp = os.listdir(ImageDirPath)
+                        result=[]
+                        for ii in resulttemp:
+                            result.append(ImageDirPath+'\\'+str(ii))
 
-                            ImageDriver = "Image Driver not checked"
-                            ImageSize = "Image size not checked"
-                            ImageNameCheck = "Image Name not Checked"
-                            ImageFormat = "Image format not checked"
-                            resolution = "resolution not checked"
-                            ImDOK = 0
-                            ImDFail = 0
-                            ImFOK = 0
-                            ImFFail = 0
-                            SizeFailCount = 0
-                            CompFailCount = 0
+                    for filename in result:
+                        # Check fileformat/driver conformity
+                        if self.dlg.checkBoxSize.isChecked():
+                            datafile = gdal.Open(filename)
+                            geoinformation = datafile.GetGeoTransform()
+                            cols = datafile.RasterXSize
 
-                            #load data (oblique or Nadir):
+                        if self.dlg.checkBoxNaming.isChecked():
                             if self.dlg.radioButtonImage_ob.isChecked():
-                                ImageDirPath = ImageDirPath.replace("\\", "/")
-                                tt = os.listdir(ImageDirPath + "/001/0001")
-                                if tt[0].endswith('.jpg'):
-                                    result = self.readdata(ImageDirPath)
-                                elif tt[0].endswith('.tif'):
-                                    result = self.readdata(ImageDirPath)
+                                patternImageID = re.compile("[0-9]{3}_[0-9]{4}_[0-9]{8}")
+                                fff = ntpath.basename(filename)
+                                if self.dlg.checkBoxPic.isChecked():
+                                    if patternImageID.match(fff):
+                                        ImageNameCheck = "ImageID - OK"
+                                    else:
+                                        ImageNameCheck = "ImageID - Fail"
                             elif self.dlg.radioButtonImage_Nadir.isChecked():
-                                resulttemp = os.listdir(ImageDirPath)
-                                result=[]
-                                for ii in resulttemp:
-                                    result.append(ImageDirPath+'\\'+str(ii))
+                                patternImageID = re.compile("[0-9]{4}_[0-9]{1}km_[0-9]{4}_[0-9]{3}")
+                                fff = ntpath.basename(filename)
+                                if self.dlg.checkBoxPic.isChecked():
+                                    if patternImageID.match(fff):
+                                        ImageNameCheck = "ImageID - OK"
+                                    else:
+                                        ImageNameCheck = "ImageID - Fail"
 
-                            for filename in result:
-                                # Check fileformat/driver conformity
-                                if self.dlg.checkBoxNaming.isChecked():
-                                    try:
-                                        if filename.endswith(".tif"):
-                                            datafile = gdal.Open(filename)
-                                            Drivers = datafile.GetDriver().ShortName
-                                            Driverl = datafile.GetDriver().LongName
-                                            if str(Drivers) == "GTiff":
-                                                ID = str(Driverl)
-                                                string = " - OK"
-                                                ImageDriver = "{} {}".format(ID, string)
-                                                ImDOK = ImDOK + 1
-                                            elif str(Drivers) != "GTiff":
-                                                ID = str(Driverl)
-                                                string = " - Fail"
-                                                ImageDriver = "{} {}".format(ID, string)
-                                                ImDFail = ImDFail + 1
-                                        elif filename.endswith(".jpg"):
-                                            datafile = gdal.Open(filename)
-                                            Drivers = datafile.GetDriver().ShortName
-                                            if str(Drivers) == "JPEG":
-                                                ID = str(Drivers)
-                                                string = " - OK"
-                                                ImageDriver = "{} {}".format(ID, string)
-                                                ImDOK = ImDOK + 1
-                                            elif str(Drivers) != "JPEG":
-                                                ID = str(Drivers)
-                                                string = " - Fail"
-                                                ImageDriver = "{} {}".format(ID, string)
-                                                ImDFail = ImDFail + 1
-
-                                    except (RuntimeError, TypeError, NameError, ValueError):
-                                        QMessageBox.information(None, "General Error","Image Driver errors found, exiting!")
-                                        return
-
-                                if self.dlg.checkBoxSize.isChecked():
-                                    datafile = gdal.Open(filename)
-                                    geoinformation = datafile.GetGeoTransform()
-                                    cols = datafile.RasterXSize
-                                    rows = datafile.RasterYSize
-                                    we_res = geoinformation[1]
-                                    ns_res = geoinformation[5]
-                                    if str(cols) == str(rows):
-                                        if self.dlg.radioButton8000.isChecked():
-                                            string1="x"
-                                            var1=str(we_res)
-                                            var2=str(ns_res)
-                                            resolution="{}{}{}".format(var1,string1,var2)
-                                            if str(cols) == "8000":
-                                                var1=str(rows)
-                                                var2=str(cols)
-                                                string1 = "Size(8000x8000): "
-                                                string2 = "x"
-                                                string3 = " - OK"
-                                                ImageSize = "{}{}{}{}{}".format(string1,var1,string2,var2,string3)
-                                            elif str(cols) != "8000":
-                                                var1 = str(rows)
-                                                var2 = str(cols)
-                                                string1 = "Size(8000x8000): "
-                                                string2 = "x"
-                                                string3 = " - Fail"
-                                                ImageSize = "{}{}{}{}{}".format(string1, var1, string2, var2, string3)
-                                                SizeFailCount = SizeFailCount + 1
-                                        elif self.dlg.radioButton5000.isChecked():
-                                            string1="x"
-                                            var1=str(we_res)
-                                            var2=str(ns_res)
-                                            resolution="{}{}{}".format(var1,string1,var2)
-                                            if str(cols) == "5000":
-                                                var1=str(rows)
-                                                var2=str(cols)
-                                                string1 = "Size(5000x5000): "
-                                                string2 = "x"
-                                                string3 = " - OK"
-                                                ImageSize = "{}{}{}{}{}".format(string1,var1,string2,var2,string3)
-                                            elif str(cols) != "5000":
-                                                var1=str(rows)
-                                                var2=str(cols)
-                                                string1 = "Size(5000x5000): "
-                                                string2 = "x"
-                                                string3 = " - Fail"
-                                                ImageSize = "{}{}{}{}{}".format(string1,var1,string2,var2,string3)
-                                                SizeFailCount = SizeFailCount + 1
-                                    elif str(cols) != str(rows):
-                                        string1 = "x"
-                                        var1 = str(we_res)
-                                        var2 = str(ns_res)
-                                        string2 = str(cols)
-                                        string3 = str(rows)
-                                        string4 = " - Fail"
-                                        resolution = "{}{}{}".format(var1, string1, var2)
-                                        SizeFailCount = SizeFailCount + 1
-                                        ImageSize = "{}{}{}{}".format(string2, string1, string3,string4)
-
-                                if self.dlg.checkBoxNaming.isChecked():
-                                    if self.dlg.radioButtonImage_ob.isChecked():
-                                        patternImageID = re.compile("[0-9]{3}_[0-9]{4}_[0-9]{8}")
-                                        fff = ntpath.basename(filename)
-                                        if self.dlg.checkBoxPic.isChecked():
-                                            if patternImageID.match(fff):
-                                                ImageNameCheck = "ImageID - OK"
-                                            else:
-                                                ImageNameCheck = "ImageID - Fail"
-                                    elif self.dlg.radioButtonImage_Nadir.isChecked():
-                                        patternImageID = re.compile("[0-9]{4}_[0-9]{1}km_[0-9]{4}_[0-9]{3}")
-                                        fff = ntpath.basename(filename)
-                                        if self.dlg.checkBoxPic.isChecked():
-                                            if patternImageID.match(fff):
-                                                ImageNameCheck = "ImageID - OK"
-                                            else:
-                                                ImageNameCheck = "ImageID - Fail"
-
-                                #QMessageBox.information(None, "General Error", res)
-                                # add image info to DB
+                        #QMessageBox.information(None, "General Error", res)
+                        # add image info to DB
 
 
-                                #add a feature
-                                if self.dlg.useSelectedAImage.isChecked():
-                                    selection = layer.selectedFeatures()
-                                else:
-                                    selection = layer.getFeatures()
-                                ff = ntpath.basename(filename)
-                                imdirpth=ntpath.basename(ImageDirPath)
-                                #for feat in selection:
-                                #    if ff==feat['ImageID']:
-                                geom = feat.geometry().centroid()
-                                Geometri = geom.asPoint()
-                                newfeat = QgsFeature()
-                                newfeat.setGeometry(QgsGeometry.fromPoint(Geometri))
-                                try:
-                                    newfeat.setAttributes([ff,ImageDriver,ImageSize,resolution,ImageNameCheck])
-                                    #newfeat.setAttributes([filename, Driverl, ImageSize, we_res+"x"+ns_res,ImageFormat,"comp - ok","direction"])
-                                except (RuntimeError, TypeError, NameError, ValueError):
-                                    QMessageBox.information(None, "General Error", "PPC Format errors found, exiting!")
+                        #add a feature
+                        #if self.dlg.useSelectedAImage.isChecked():
+                        #    selection = layer.selectedFeatures()
+                        #else:
+                        #    selection = layer.getFeatures()
+                        ff = ntpath.basename(filename)
+                        imdirpth=ntpath.basename(ImageDirPath)
+                        #for feat in selection:
+                        #    if ff==feat['ImageID']:
+                        #geom = feat.geometry().centroid()
+                        #Geometri = geom.asPoint()
+                        newfeat = QgsFeature()
+                        #newfeat.setGeometry(QgsGeometry.fromPoint(Geometri))
+                        try:
+                            newfeat.setAttributes([ff,ImageDriver,ImageSize,resolution,ImageNameCheck])
+                            #newfeat.setAttributes([filename, Driverl, ImageSize, we_res+"x"+ns_res,ImageFormat,"comp - ok","direction"])
+                        except (RuntimeError, TypeError, NameError, ValueError):
+                            QMessageBox.information(None, "General Error", "PPC Format errors found, exiting!")
 
-                                pr.addFeatures([newfeat])
+                        pr.addFeatures([newfeat])
 
 
-                            vl.updateExtents()
-                            vl.updateFields()
-                            QgsMapLayerRegistry.instance().addMapLayer(vl)
+                    vl.updateExtents()
+                    vl.updateFields()
+                    QgsMapLayerRegistry.instance().addMapLayer(vl)
 
-                            rapportenI = "Check of: \n" + imdirpth + "\n \nThere was found: \n" + str(ImDFail)+" Image Format Failure \n" +  str(SizeFailCount) + " Images of wrong size"
-                            if ImDFail+ImFFail+SizeFailCount+CompFailCount == 0:
-                                QMessageBox.information(self.iface.mainWindow(),'PPC check',rapportenI)
-                            else:
-                                QMessageBox.critical(self.iface.mainWindow(),'PPC check',rapportenI)
-                            self.dlg.close()
-                            return
+                    rapportenI = "Check of: \n" + imdirpth + "\n \nThere was found: \n" + str(ImDFail)+" Image Format Failure \n" +  str(SizeFailCount) + " Images of wrong size"
+                    if ImDFail+ImFFail+SizeFailCount+CompFailCount == 0:
+                        QMessageBox.information(self.iface.mainWindow(),'PPC check',rapportenI)
+                    else:
+                        QMessageBox.critical(self.iface.mainWindow(),'PPC check',rapportenI)
+                    self.dlg.close()
+                    return
                 except (RuntimeError, TypeError, NameError): #, ValueError):
                     QMessageBox.information(None, "General Error", "General file error V2.1, please check that you have choosen the correct PPC file")
                     return
 
+
             if str(currentIndex) == "2":
+                # QMessageBox.information(None, "index: ", str(currentIndex))
                 import subprocess
-                inputLayer = unicode(self.dlg.inShapeAPPC.currentText())
-                WantedCamPath = str(self.dlg.lineEditCamDir.text())
+                inputLayer = unicode(self.dlg.inShapeAImage.currentText())
+                inputFilNavn = self.dlg.inShapeAImage.currentText()
+                ImageDirPath = str(self.dlg.lineEditImageDir.text())
 
-                caminfo = self.readCameras(WantedCamPath)
+                canvas = self.iface.mapCanvas()
+                allLayers = canvas.layers()
+                try:
+                    count = 0
+                    #for i in allLayers:
+                    #    if (i.name() == inputFilNavn):
+                    #        layer = i
 
-                inputFilNavn = self.dlg.inShapeAPPC.currentText()
+                    # create virtual layer
+                    vl = QgsVectorLayer("Point", "Image-check: " + str(ntpath.basename(ImageDirPath)), "memory")
+                    pr = vl.dataProvider()
+
+                    ImDFail = 0
+                    ImFFail = 0
+                    SizeFailCount = 0
+                    CompFailCount = 0
+                    # vl.startEditing()
+                    # add fields
+                    pr.addAttributes([QgsField("ImageID", QVariant.String),
+                                      QgsField("Dirver", QVariant.String),
+                                      QgsField("Image Size", QVariant.String),
+                                      QgsField("Pixel Sixe", QVariant.String),
+                                      QgsField("Format", QVariant.String)])
+
+                    #if self.dlg.useSelectedAImage.isChecked():
+                    #    selection = layer.selectedFeatures()
+                    #    QMessageBox.information(None, "status", "checking selected features")
+                    #else:
+                    #    selection = layer.getFeatures()
+                    #    QMessageBox.information(None, "status", "checking all features")
+
+                    #for feat in selection:
+                    #    geom = feat.geometry().centroid()
+                    #    Geometri = geom.asPoint()
+
+                    ImageDriver = "Image Driver not checked"
+                    ImageSize = "Image size not checked"
+                    ImageNameCheck = "Image Name not Checked"
+                    ImageFormat = "Image format not checked"
+                    resolution = "resolution not checked"
+                    ImDOK = 0
+                    ImDFail = 0
+                    ImFOK = 0
+                    ImFFail = 0
+                    SizeFailCount = 0
+                    CompFailCount = 0
+                    #load data (oblique or Nadir):
+                    if self.dlg.radioButtonImage_ob.isChecked():
+                        QMessageBox.information(None, "OBS - Oblique dataset", "Processing may take a couple of minutes!")
+                        ImageDirPath = ImageDirPath.replace("\\", "/")
+                        tt = os.listdir(ImageDirPath + "/001/0001")
+                        if tt[0].endswith('.jpg'):
+                            result = self.readdata(ImageDirPath)
+                        elif tt[0].endswith('.tif'):
+                            result = self.readdata(ImageDirPath)
+                    elif self.dlg.radioButtonImage_Nadir.isChecked():
+                        resulttemp = os.listdir(ImageDirPath)
+                        result=[]
+                        for ii in resulttemp:
+                            result.append(ImageDirPath+'\\'+str(ii))
+
+                    for filename in result:
+                        # Check fileformat/driver conformity
+                        if self.dlg.checkBoxNaming.isChecked():
+                            try:
+                                if filename.endswith(".tif"):
+                                    datafile = gdal.Open(filename)
+                                    Drivers = datafile.GetDriver().ShortName
+                                    Driverl = datafile.GetDriver().LongName
+                                    if str(Drivers) == "GTiff":
+                                        ID = str(Driverl)
+                                        string = " - OK"
+                                        ImageDriver = "{} {}".format(ID, string)
+                                        ImDOK = ImDOK + 1
+                                    elif str(Drivers) != "GTiff":
+                                        ID = str(Driverl)
+                                        string = " - Fail"
+                                        ImageDriver = "{} {}".format(ID, string)
+                                        ImDFail = ImDFail + 1
+                                elif filename.endswith(".jpg"):
+                                    datafile = gdal.Open(filename)
+                                    Drivers = datafile.GetDriver().ShortName
+                                    if str(Drivers) == "JPEG":
+                                        ID = str(Drivers)
+                                        string = " - OK"
+                                        ImageDriver = "{} {}".format(ID, string)
+                                        ImDOK = ImDOK + 1
+                                    elif str(Drivers) != "JPEG":
+                                        ID = str(Drivers)
+                                        string = " - Fail"
+                                        ImageDriver = "{} {}".format(ID, string)
+                                        ImDFail = ImDFail + 1
+
+                            except (RuntimeError, TypeError, NameError, ValueError):
+                                QMessageBox.information(None, "General Error","Image Driver errors found, exiting!")
+                                return
+
+                        if self.dlg.checkBoxSize.isChecked():
+                            datafile = gdal.Open(filename)
+                            geoinformation = datafile.GetGeoTransform()
+                            cols = datafile.RasterXSize
+                            rows = datafile.RasterYSize
+                            we_res = geoinformation[1]
+                            ns_res = geoinformation[5]
+                            if str(cols) == str(rows):
+                                if self.dlg.radioButton8000.isChecked():
+                                    string1="x"
+                                    var1=str(we_res)
+                                    var2=str(ns_res)
+                                    resolution="{}{}{}".format(var1,string1,var2)
+                                    if str(cols) == "8000":
+                                        var1=str(rows)
+                                        var2=str(cols)
+                                        string1 = "Size(8000x8000): "
+                                        string2 = "x"
+                                        string3 = " - OK"
+                                        ImageSize = "{}{}{}{}{}".format(string1,var1,string2,var2,string3)
+                                    elif str(cols) != "8000":
+                                        var1 = str(rows)
+                                        var2 = str(cols)
+                                        string1 = "Size(8000x8000): "
+                                        string2 = "x"
+                                        string3 = " - Fail"
+                                        ImageSize = "{}{}{}{}{}".format(string1, var1, string2, var2, string3)
+                                        SizeFailCount = SizeFailCount + 1
+                                elif self.dlg.radioButton5000.isChecked():
+                                    string1="x"
+                                    var1=str(we_res)
+                                    var2=str(ns_res)
+                                    resolution="{}{}{}".format(var1,string1,var2)
+                                    if str(cols) == "5000":
+                                        var1=str(rows)
+                                        var2=str(cols)
+                                        string1 = "Size(5000x5000): "
+                                        string2 = "x"
+                                        string3 = " - OK"
+                                        ImageSize = "{}{}{}{}{}".format(string1,var1,string2,var2,string3)
+                                    elif str(cols) != "5000":
+                                        var1=str(rows)
+                                        var2=str(cols)
+                                        string1 = "Size(5000x5000): "
+                                        string2 = "x"
+                                        string3 = " - Fail"
+                                        ImageSize = "{}{}{}{}{}".format(string1,var1,string2,var2,string3)
+                                        SizeFailCount = SizeFailCount + 1
+                            elif str(cols) != str(rows):
+                                string1 = "x"
+                                var1 = str(we_res)
+                                var2 = str(ns_res)
+                                string2 = str(cols)
+                                string3 = str(rows)
+                                string4 = " - Fail"
+                                resolution = "{}{}{}".format(var1, string1, var2)
+                                SizeFailCount = SizeFailCount + 1
+                                ImageSize = "{}{}{}{}".format(string2, string1, string3,string4)
+
+                        if self.dlg.checkBoxNaming.isChecked():
+                            if self.dlg.radioButtonImage_ob.isChecked():
+                                patternImageID = re.compile("[0-9]{3}_[0-9]{4}_[0-9]{8}")
+                                fff = ntpath.basename(filename)
+                                if self.dlg.checkBoxPic.isChecked():
+                                    if patternImageID.match(fff):
+                                        ImageNameCheck = "ImageID - OK"
+                                    else:
+                                        ImageNameCheck = "ImageID - Fail"
+                            elif self.dlg.radioButtonImage_Nadir.isChecked():
+                                patternImageID = re.compile("[0-9]{4}_[0-9]{1}km_[0-9]{4}_[0-9]{3}")
+                                fff = ntpath.basename(filename)
+                                if self.dlg.checkBoxPic.isChecked():
+                                    if patternImageID.match(fff):
+                                        ImageNameCheck = "ImageID - OK"
+                                    else:
+                                        ImageNameCheck = "ImageID - Fail"
+
+                        #QMessageBox.information(None, "General Error", res)
+                        # add image info to DB
+
+
+                        #add a feature
+                        #if self.dlg.useSelectedAImage.isChecked():
+                        #    selection = layer.selectedFeatures()
+                        #else:
+                        #    selection = layer.getFeatures()
+                        ff = ntpath.basename(filename)
+                        imdirpth=ntpath.basename(ImageDirPath)
+                        #for feat in selection:
+                        #    if ff==feat['ImageID']:
+                        #geom = feat.geometry().centroid()
+                        #Geometri = geom.asPoint()
+                        newfeat = QgsFeature()
+                        #newfeat.setGeometry(QgsGeometry.fromPoint(Geometri))
+                        try:
+                            newfeat.setAttributes([ff,ImageDriver,ImageSize,resolution,ImageNameCheck])
+                            #newfeat.setAttributes([filename, Driverl, ImageSize, we_res+"x"+ns_res,ImageFormat,"comp - ok","direction"])
+                        except (RuntimeError, TypeError, NameError, ValueError):
+                            QMessageBox.information(None, "General Error", "PPC Format errors found, exiting!")
+
+                        pr.addFeatures([newfeat])
+
+
+                    vl.updateExtents()
+                    vl.updateFields()
+                    QgsMapLayerRegistry.instance().addMapLayer(vl)
+
+                    rapportenI = "Check of: \n" + imdirpth + "\n \nThere was found: \n" + str(ImDFail)+" Image Format Failure \n" +  str(SizeFailCount) + " Images of wrong size"
+                    if ImDFail+ImFFail+SizeFailCount+CompFailCount == 0:
+                        QMessageBox.information(self.iface.mainWindow(),'PPC check',rapportenI)
+                    else:
+                        QMessageBox.critical(self.iface.mainWindow(),'PPC check',rapportenI)
+                    self.dlg.close()
+                    return
+                except (RuntimeError, TypeError, NameError): #, ValueError):
+                    QMessageBox.information(None, "General Error", "General file error V2.1, please check that you have choosen the correct PPC file")
+                    return
+
+            if str(currentIndex) == "3":
+                import subprocess
+                inputLayer = unicode(self.dlg.inShapeAImage.currentText())
+
+                ImageDirPath = str(self.dlg.lineEditDBImageDir.text())
+                inputFilNavn = self.dlg.inShapeAImage.currentText()
 
                 canvas = self.iface.mapCanvas()
                 allLayers = canvas.layers()
@@ -1037,6 +1301,7 @@ class PPC_check:
                     count = 0
 
                     for i in allLayers:
+
                         #QMessageBox.information(None, "status",i.name())
                         if(i.name() == inputFilNavn):
                             layer=i
@@ -1045,102 +1310,123 @@ class PPC_check:
                             vl = QgsVectorLayer("Point", "Image-check: " + str(ntpath.basename(ImageDirPath)), "memory")
                             pr = vl.dataProvider()
 
-                            ImDFail = 0
-                            ImFFail = 0
-                            SizeFailCount = 0
-                            CompFailCount = 0
-                            # vl.startEditing()
-                            # add fields
-                            pr.addAttributes([QgsField("ImageID", QVariant.String),
-                                              QgsField("Dirver", QVariant.String),
-                                              QgsField("Image Size", QVariant.String),
-                                              QgsField("Pixel Sixe", QVariant.String),
-                                              QgsField("Format", QVariant.String)])
+                            if self.dlg.checkBoxComp.isChecked():
+                                ImageIDext = []
+                                ImageID = []
+                                ImageIDIM = []
+                                if self.dlg.useSelectedAImage.isChecked():
+                                    selection = layer.selectedFeatures()
+                                    QMessageBox.information(None, "status", "checking selected features")
+                                else:
+                                    selection = layer.getFeatures()
+                                    QMessageBox.information(None, "status", "checking all features")
+                                for ft in selection:
+                                    attrs = ft.attributes()
+                                    ImageIDext.append(attrs[0])
+                                for i in range(0, len(ImageIDext)):
+                                    ImageIDext[i] = ImageIDext[i] + ".tif"
 
-                            if self.dlg.useSelectedAImage.isChecked():
-                                selection = layer.selectedFeatures()
-                                QMessageBox.information(None, "status", "checking selected features")
-                            else:
-                                selection = layer.getFeatures()
-                                QMessageBox.information(None, "status", "checking all features")
+                                if self.dlg.radioButtonDB_ob.isChecked():
+                                    ImageDirPath = ImageDirPath.replace("\\", "/")
+                                    #tt = os.listdir(ImageDirPath + "/001/0001")
+                                    ImageIDIM = self.readdata(ImageDirPath)
+                                elif self.dlg.radioButtonDB_Nadir.isChecked():
+                                    resulttemp = os.listdir(ImageDirPath)
+                                    for ii in resulttemp:
+                                        ImageIDIM.append(ImageDirPath + '\\' + str(ii))
+                                for i in ImageIDIM:
+                                    ImageID.append(os.path.basename(os.path.normpath(i)))
 
-                            for feat in selection:
-                                geom = feat.geometry().centroid()
-                                Geometri = geom.asPoint()
-
-                            ImageDriver = "Image Driver not checked"
-                            ImageSize = "Image size not checked"
-                            ImageNameCheck = "Image Name not Checked"
-                            ImageFormat = "Image format not checked"
-                            resolution = "resolution not checked"
-                            ImDOK = 0
-                            ImDFail = 0
-                            ImFOK = 0
-                            ImFFail = 0
-                            SizeFailCount = 0
-                            CompFailCount = 0
-
-                            #load data (oblique or Nadir):
-                            if self.dlg.radioButtonImage_ob.isChecked():
-                                ImageDirPath = ImageDirPath.replace("\\", "/")
-                                tt = os.listdir(ImageDirPath + "/001/0001")
-                                if tt[0].endswith('.jpg'):
-                                    result = self.readdata(ImageDirPath)
-                                elif tt[0].endswith('.tif'):
-                                    result = self.readdata(ImageDirPath)
-                            elif self.dlg.radioButtonImage_Nadir.isChecked():
-                                resulttemp = os.listdir(ImageDirPath)
-                                result=[]
-                                for ii in resulttemp:
-                                    result.append(ImageDirPath+'\\'+str(ii))
-
-                            for filename in result:
-                                # Check fileformat conformity
-                                if self.dlg.checkBoxComp.isChecked():
-                                    fnanme = ntpath.basename(filename)
-                                    if self.dlg.useSelectedAImage.isChecked():
-                                        selection = layer.selectedFeatures()
+                                imdirpth = ntpath.basename(ImageDirPath)
+                                Comparison1 = []
+                                Comparison2 = []
+                                FP_in_IM = []
+                                FP_not_in_IM = []
+                                Images_in_FP = []
+                                Images_not_in_FP = []
+                                nlist=[]
+                                ImDFail = 0
+                                ImFFail = 0
+                                SizeFailCount = 0
+                                CompFailCount = 0
+                                for i in ImageIDext:
+                                    if i in ImageID:
+                                        FP_in_IM.append(i)
+                                        Comparison1.append("OK - Footprint has associated Image")
                                     else:
-                                        selection = layer.getFeatures()
-                                    ImageIDlist = []
-                                    for feat in selection:
-                                        ImageIDlist.append(feat['ImageID'])
-
-                                    if any(fnanme in s for s in ImageIDlist):
-                                        Comparison = "comparison between ImageID and PPC-ImageID - OK"
+                                        FP_not_in_IM.append(i)
+                                        Comparison2.append("Fail - Footprint does not have associated Image")
+                                for i in ImageID:
+                                    if i in ImageIDext:
+                                        Images_in_FP.append(i)
+                                        Comparison1.append("OK - Image has associated footprint")
                                     else:
-                                        Comparison = "comparison between ImageID and PPC-ImageID - Fail"
-                                        CompFailCount = CompFailCount +1
+                                        Images_not_in_FP.append(i)
+                                        Comparison2.append("Fail - Image does not have associated footprint")
 
+                                # add fields
+                                pr.addAttributes([QgsField("ID", QVariant.String),
+                                                  QgsField("ImageID", QVariant.String),
+                                                  QgsField("FootprintID", QVariant.String),
+                                                  QgsField("Comparison", QVariant.String)])
 
-                                #QMessageBox.information(None, "General Error", res)
-                                #add a feature
+                                if len(ImageID) < len(ImageIDext):
+                                    rng = len(ImageIDext) + len(Images_not_in_FP)
+                                    dif = len(Images_in_FP)
+                                elif len(ImageID) > len(ImageIDext):
+                                    rng = len(ImageID) + len(FP_not_in_IM)
+                                    dif = len(FP_in_IM)
+                                ImageIDext.sort()
                                 if self.dlg.useSelectedAImage.isChecked():
                                     selection = layer.selectedFeatures()
                                 else:
                                     selection = layer.getFeatures()
-                                ff = ntpath.basename(filename)
-                                imdirpth=ntpath.basename(ImageDirPath)
-                                #for feat in selection:
-                                #    if ff==feat['ImageID']:
-                                geom = feat.geometry().centroid()
-                                Geometri = geom.asPoint()
-                                newfeat = QgsFeature()
-                                newfeat.setGeometry(QgsGeometry.fromPoint(Geometri))
-                                try:
-                                    newfeat.setAttributes([ff,ImageDriver,ImageSize,resolution,direction])
-                                    #newfeat.setAttributes([filename, Driverl, ImageSize, we_res+"x"+ns_res,ImageFormat,"comp - ok","direction"])
-                                except (RuntimeError, TypeError, NameError, ValueError):
-                                    QMessageBox.information(None, "General Error", "PPC Format errors found, exiting!")
 
-                                pr.addFeatures([newfeat])
+                                for feat in selection:
+                                    geom = feat.geometry().centroid()
+                                    Geometri = geom.asPoint()
+                                    nlist.append(Geometri)
+
+                                for i in range(0,rng):
+                                    # add a feature
+                                    newfeat = QgsFeature()
+                                    if i < dif:
+                                        newfeat.setGeometry(QgsGeometry.fromPoint(nlist[i]))
+                                        try:
+                                            newfeat.setAttributes([i, ImageID[i], ImageID[i],Comparison1[i]])
+                                        except (RuntimeError, TypeError, NameError, ValueError):
+                                            QMessageBox.information(None, "General Error","PPC Format errors found, exiting!")
+                                    elif dif <= i < (dif + len(FP_not_in_IM)):
+                                        newfeat.setGeometry(QgsGeometry.fromPoint(nlist[i]))
+                                        if len(ImageID) < len(ImageIDext):
+                                            try:
+                                                newfeat.setAttributes([i, '', FP_not_in_IM[i - dif], Comparison2[i - dif]])
+                                            except (RuntimeError, TypeError, NameError, ValueError):
+                                                QMessageBox.information(None, "General Error","PPC Format errors found, exiting!")
+                                        elif len(ImageID) > len(ImageIDext):
+                                            try:
+                                                newfeat.setAttributes([i, '', FP_not_in_IM[i-dif], Comparison2[i - dif]])
+                                            except (RuntimeError, TypeError, NameError, ValueError):
+                                                QMessageBox.information(None, "General Error","PPC Format errors found, exiting!")
+                                    else:
+                                        if len(ImageID) < len(ImageIDext):
+                                            try:
+                                                newfeat.setAttributes([i,'',FP_not_in_IM[i - dif - len(Images_not_in_FP) - len(FP_not_in_IM)], Comparison2[i - dif]])
+                                            except (RuntimeError, TypeError, NameError, ValueError):
+                                                QMessageBox.information(None, "General Error","PPC Format errors found, exiting!")
+                                        elif len(ImageID) > len(ImageIDext):
+                                            try:
+                                                newfeat.setAttributes([i, Images_not_in_FP[i - dif - len(Images_not_in_FP) - len(FP_not_in_IM)],'', Comparison2[i - dif]])
+                                            except (RuntimeError, TypeError, NameError, ValueError):
+                                                QMessageBox.information(None, "General Error","PPC Format errors found, exiting!")
+                                    pr.addFeatures([newfeat])
 
 
                         vl.updateExtents()
                         vl.updateFields()
                         QgsMapLayerRegistry.instance().addMapLayer(vl)
 
-                        rapportenI = "Check of: \n" + imdirpth + "\n \nThere was found: \n" + str(ImDFail)+" Image Format Failure \n" +  str(SizeFailCount) + " Images of wrong size"
+                        rapportenI = "Check of: \n" + imdirpth + "\n \nThere was found: \n" + str(len(Images_not_in_FP))+" Images without associated Footprint \n" +  str(len(FP_not_in_IM)) + " Footprints without associated Image \n"
                         if ImDFail+ImFFail+SizeFailCount+CompFailCount == 0:
                             QMessageBox.information(self.iface.mainWindow(),'PPC check',rapportenI)
                         else:
@@ -1148,5 +1434,5 @@ class PPC_check:
                         self.dlg.close()
                         return
                 except (RuntimeError, TypeError, NameError): #, ValueError):
-                    QMessageBox.information(None, "General Error", "General file error V2.1, please check that you have choosen the correct PPC file")
+                    QMessageBox.information(None, "General Error", "General file error DB-tab, please check that you have choosen the correct file")
                     return
