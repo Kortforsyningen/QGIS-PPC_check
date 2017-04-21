@@ -99,10 +99,13 @@ class PPC_check:
         self.dlg.checkBoxRef.setChecked(True)
         self.dlg.lineEditRef.setText('ETRS89,UTM32N,DVR90')
         self.dlg.checkBoxNaming.setChecked(True)
+        self.dlg.checkBoxVoids.setChecked(True)
         self.dlg.checkBoxSize.setChecked(True)
         self.dlg.checkBoxComp.setChecked(True)
         self.dlg.radioButtonPPC_Nadir.setChecked(True)
+        self.dlg.radioButtonDB_Nadir.setChecked(True)
         self.dlg.radioButtonImage_Nadir.setChecked(True)
+        self.dlg.radioButtonDBQC_Nadir.setChecked(True)
         self.dlg.radioButton8000.setChecked(True)
         self.dlg.lineEditDBImageDir.setText('C:/Users/B020736/Documents/Test_Oblique_2017/Image_TIF')
 
@@ -185,8 +188,7 @@ class PPC_check:
 
     def showFileSelectDialogUploadDB(self):
         pass
-       #fname = QFileDialog.getExistingDirectory( None, 'Open image directory', os.path.dirname(__file__))
-       #self.dlg.lineEditDBImageDir.setText(fname)
+
 
     def checkA( self ):
         inputFilNavnPPC = unicode( self.dlg.inShapeAPPC.currentText() )
