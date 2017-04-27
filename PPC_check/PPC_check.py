@@ -85,7 +85,6 @@ class PPC_check:
         #    self.dlg.lineEditDBImageDir.setText("C:\Users\B020736\Documents\Test_GeoDK_2017\TIF_GeoDK")
 
         self.dlg.pushButton_InputPPC.clicked.connect(self.showFileSelectDialogInputPPC)
-        self.dlg.pushButton_InputImage.clicked.connect(self.showFileSelectDialogInputImage)
         self.dlg.pushButton_InputDB.clicked.connect(self.showFileSelectDialogInputDB)
         self.dlg.pushButton_uploadDB.clicked.connect(self.showFileSelectDialogUploadDB)
         QObject.connect(self.dlg.inShapeAPPC, SIGNAL("currentIndexChanged(QString)" ), self.checkA )
@@ -102,16 +101,12 @@ class PPC_check:
         self.dlg.checkBoxTilt.setChecked(True)
         self.dlg.lineEditTilt.setText(self.Tilt)
         self.dlg.checkBoxRef.setChecked(True)
-        self.dlg.lineEditRef.setText('ETRS89,UTM32N,DVR90')
-        self.dlg.checkBoxNaming.setChecked(True)
-        self.dlg.checkBoxVoids.setChecked(True)
-        self.dlg.checkBoxSize.setChecked(True)
         self.dlg.checkBoxComp.setChecked(True)
+        self.dlg.lineEditRef.setText('ETRS89,UTM32N,DVR90')
+        self.dlg.checkBoxVoids.setChecked(True)
         self.dlg.radioButtonPPC_Nadir.setChecked(True)
         self.dlg.radioButtonDB_Nadir.setChecked(True)
-        self.dlg.radioButtonImage_Nadir.setChecked(True)
         self.dlg.radioButtonDBQC_Nadir.setChecked(True)
-        self.dlg.radioButton8000.setChecked(True)
         self.dlg.lineEditDBImageDir.setText('C:/Users/B020736/Documents/Test_Oblique_2017/Image_TIF')
 
     # noinspection PyMethodMayBeStatic
@@ -201,7 +196,7 @@ class PPC_check:
                 layer = i
 
                 # create virtual layer
-                vl = QgsVectorLayer("Point", "DB-upload: " + str(inputFilNavn), "memory")
+                vl = QgsVectorLayer("Point", "Rapport DB-upload: " + str(inputFilNavn), "memory")
                 pr = vl.dataProvider()
                 # vl.startEditing()
                 # add fields
@@ -209,149 +204,305 @@ class PPC_check:
                                   QgsField("Upload", QVariant.String),
                                   QgsField("Reason", QVariant.String)])
 
-                if self.dlg.useSelectedAPPC.isChecked():
+                if self.dlg.useSelectedDB.isChecked():
                     selection = layer.selectedFeatures()
-                    QMessageBox.information(None, "status", "checking selected features")
+                    QMessageBox.information(None, "status", "uploading selected features")
                 else:
                     selection = layer.getFeatures()
-                    QMessageBox.information(None, "status", "checking all features")
+                    QMessageBox.information(None, "status", "uploading all features")
 
-                # Herunder skabes link til database
-                DB_name = "gcp_db"
-                DB_host = "kmsloaddbudv3.kmsext.dk"
-                DB_port = "5432"
-                DB_user = "gst_anfla"
-                DB_pass = "gst_anfla"
-                # Herunder opsttes tabellen der skal bruges. Findes tabellen ikke allerede opretts den
-                DB_schema = "public"
-                DB_geom = "geom"
-                if self.dlg.radioButtonDB_ob:
-                    DB_table = 'oblique_2017_check_table'
-                elif self.dlg.radioButtonDB_Nadir:
-                    DB_table = 'geodk_2017_check_table'
+                if self.dlg.radioButtonDB_ob.isChecked():
+                    # Herunder skabes link til database
+                    #DB_name = "gcp_db"
+                    #DB_host = "kmsloaddbudv3.kmsext.dk"
+                    #DB_port = "5432"
+                    #DB_user = "gst_anfla"
+                    #DB_pass = "gst_anfla"
+                    # Herunder opsttes tabellen der skal bruges. Findes tabellen ikke allerede opretts den
+                    #DB_schema = "public"
+                    #DB_geom = "geom"
+                    DB_name = "geodanmark"
+                    DB_host = "c1200038"
+                    DB_port = "5432"
+                    DB_user = "postgres"
+                    DB_pass = "postgres"
+                    # Herunder opsttes tabellen der skal bruges. Findes tabellen ikke allerede opretts den
+                    DB_schema = "public"
+                    DB_geom = "geom"
+                    DB_table = 'footprints2017'
+                    #DB_table = 'oblique_2017_check_table'
 
-                conn = psycopg2.connect("dbname=" + DB_name + " user=" + DB_user + " host=" + DB_host + " password=" + DB_pass)
-                cur = conn.cursor()
-
-                cur.execute("select exists(select * from information_schema.tables where table_name=%s)", (DB_table,))
-                if cur.fetchone()[0]:
-                    QMessageBox.information(None, "General Info",'Database found - uploading')
-                else:
-                    QMessageBox.information(None, "General Info", 'Creating database ' + DB_table)
-                    cur.execute("CREATE TABLE " + DB_schema + "." + DB_table + "(imageid TEXT PRIMARY KEY, easting float, northing float, height real,omega real, phi real, Kappa real, direction text, timeutc text, cameraid text, estacc real, height_eli text, timecet text, \"references\" text, producer text, level real, comment_co text, comment_sd text, status text, gsd text, geom geometry)")
-                    conn.commit()
-
-                IDs = []
-                cur.execute('SELECT * from '+DB_table)
-                rows = cur.fetchall()
-                for row in rows:
-                    ii = row[0]
-                    IDs.append(ii)
-                list = []
-                finallist = []
-                ImageID = []
-                East = []
-                North = []
-                Height = []
-                Omega = []
-                Phi = []
-                Kappa = []
-                Direction = []
-                TimeUTC = []
-                CameraID = []
-                EstAcc = []
-                Height_Eli = []
-                TimeCET = []
-                ReferenceS = []
-                Producer = []
-                Level = []
-                Comment_co = []
-                Comment_sdfe = []
-                Status = []
-                GSD = []
-                for ft in selection:
-                    attrs = ft.attributes()
-                    ImageID.append(attrs[0])
-                    East.append(attrs[1])
-                    North.append(attrs[2])
-                    Height.append(attrs[3])
-                    Omega.append(attrs[4])
-                    Phi.append(attrs[5])
-                    Kappa.append(attrs[6])
-                    Direction.append(attrs[7])
-                    TimeUTC.append(attrs[8])
-                    CameraID.append(attrs[9])
-                    EstAcc.append(attrs[10])
-                    Height_Eli.append(attrs[11])
-                    TimeCET.append(attrs[12])
-                    ReferenceS.append(attrs[13])
-                    Producer.append(attrs[14])
-                    Level.append(attrs[15])
-                    Comment_co.append(attrs[16])
-                    Comment_sdfe.append(attrs[17])
-                    Status.append(attrs[18])
-                    GSD.append(attrs[19])
-                    geom = ft.geometry()
-                    Geometri = geom.asPolygon()
-                    list.append(Geometri)
-
-                for ll in list:
-                    test = str(ll[0])
-                    test1 = test.replace("[", "")
-                    test2 = test1.replace("]", "")
-                    test3 = test2.replace(",", " ")
-                    test4 = test3.replace(")  (", "), (")
-                    test5 = test4.replace("(", "")
-                    test6 = test5.replace(")", "")
-                    finallist.append(test6)
-
-                try:
+                    conn = psycopg2.connect("dbname=" + DB_name + " user=" + DB_user + " host=" + DB_host + " password=" + DB_pass)
                     cur = conn.cursor()
-                    try:
-                        for i in range(0, (len(ImageID))):
-                            if ImageID[i] not in IDs:
-                                cur.execute("""INSERT INTO """+DB_table+"""  ("imageid","easting","northing","height","omega","phi","kappa","direction","timeutc","cameraid","estacc",
-                                "height_eli","timecet",\"references\","producer","level","comment_co","comment_sd","status","gsd","geom") VALUES(%(str1)s,%(float1)s,%(float2)s,%(real3)s,%(str2)s,
-                                %(str3)s,%(str4)s,%(str5)s,%(str6)s,%(str7)s,%(real4)s,%(real5)s,%(str8)s,%(str9)s,%(str10)s,%(str11)s,%(str12)s,%(str13)s,%(str14)s,%(str15)s,ST_GeomFromText(%(str16)s,25832))""",
-                                            {'str1': ImageID[i], 'float1': East[i], 'float2': North[i], 'real3': Height[i],
-                                             'str2': Omega[i], 'str3': Phi[i], 'str4': Kappa[i], 'str5': Direction[i],
-                                             'str6': TimeUTC[i], 'str7': CameraID[i],
-                                             'real4': EstAcc[i], 'real5': str(Height_Eli[i]), 'str8': TimeCET[i],
-                                             'str9': ReferenceS[i], 'str10': Producer[i], 'str11': Level[i],
-                                             'str12': str(Comment_co[i]), 'str13': str(Comment_sdfe[i]),
-                                             'str14': str(Status[i]), 'str15': str(GSD[i]),
-                                             'str16': str('POLYGON((' + finallist[i] + '))')})
-#                                QMessageBox.information(None, "General Info", "Image: " + ImageID[i] + " Inserted in DB")
-                            else:
-                                pass
-#                                QMessageBox.information(None, "General Info", "Image: " + ImageID[i] + " Exsisted in DB")
 
-                    except psycopg2.IntegrityError:
-                        conn.rollback()
-                        print 'commit error - rolling back'
+                    cur.execute("select exists(select * from information_schema.tables where table_name=%s)", (DB_table,))
+                    if cur.fetchone()[0]:
+                        QMessageBox.information(None, "General Info",'Database found - uploading')
                     else:
+                        QMessageBox.information(None, "General Info", 'Creating database ' + DB_table)
+                        cur.execute("CREATE TABLE " + DB_schema + "." + DB_table + "(imageid TEXT PRIMARY KEY, easting float, northing float, height real,omega real, phi real, kappa real, direction text, timeutc text, cameraid text, coneid real, estacc real, height_eli text, timecet text, \"references\" text, producer text, level real, comment_co text, comment_sd text, status text, gsd text, geom geometry)")
                         conn.commit()
 
-                except Exception, e:
-                    QMessageBox.information(None, "General Info", 'ERROR:', e[0])
+                    IDs = []
+                    cur.execute('SELECT * from '+DB_table)
+                    rows = cur.fetchall()
+                    for row in rows:
+                        ii = row[0]
+                        IDs.append(ii)
+                    list = []
+                    coneid=[]
+                    finallist = []
+                    ImageID = []
+                    East = []
+                    North = []
+                    Height = []
+                    Omega = []
+                    Phi = []
+                    Kappa = []
+                    Direction = []
+                    TimeUTC = []
+                    CameraID = []
+                    EstAcc = []
+                    Height_Eli = []
+                    TimeCET = []
+                    ReferenceS = []
+                    Producer = []
+                    Level = []
+                    Comment_co = []
+                    Comment_sdfe = []
+                    Status = []
+                    GSD = []
+                    IMupload=[]
+                    IMreason=[]
+                    DBY=0
+                    DBN=0
+                    for feat in selection:
+                        #attrs = ft.attributes()
+                        ImageID.append(feat['ImageID'])
+                        East.append(feat['Easting'])
+                        North.append(feat['Northing'])
+                        Height.append(feat['Height'])
+                        Omega.append(feat['Omega'])
+                        Phi.append(feat['Phi'])
+                        Kappa.append(feat['Kappa'])
+                        Direction.append(feat['Direction'])
+                        TimeUTC.append(feat['TimeUTC'])
+                        CameraID.append(feat['CameraID'])
+                        EstAcc.append(feat['EstAcc'])
+                        Height_Eli.append(feat['Height_Eli'])
+                        TimeCET.append(feat['TimeCET'])
+                        ReferenceS.append(feat['ReferenceS'])
+                        Producer.append(feat['Producer'])
+                        Level.append(feat['Level'])
+                        Comment_co.append(feat['Comment_Co'])
+                        Comment_sdfe.append(feat['Comment_GS'])
+                        Status.append(feat['Status'])
+                        GSD.append(feat['GSD'])
+                        coneid.append(feat['ConeID'])
+                        geom = feat.geometry()
+                        Geometri = geom.asPolygon()
+                        list.append(Geometri)
+
+                    for ll in list:
+                        test = str(ll[0])
+                        test1 = test.replace("[", "")
+                        test2 = test1.replace("]", "")
+                        test3 = test2.replace(",", " ")
+                        test4 = test3.replace(")  (", "), (")
+                        test5 = test4.replace("(", "")
+                        test6 = test5.replace(")", "")
+                        finallist.append(test6)
+
+                    try:
+                        cur = conn.cursor()
+                        try:
+                            for i in range(0, (len(ImageID))):
+                                if ImageID[i] not in IDs:
+                                    cur.execute("""INSERT INTO """+DB_table+"""  ("imageid","easting","northing","height","omega","phi","kappa","direction","timeutc","cameraid","coneid","estacc",
+                                    "height_eli","timecet",\"references\","producer","level","comment_co","comment_sd","status","gsd","geom") VALUES(%(str1)s,%(float1)s,%(float2)s,%(real3)s,%(str2)s,
+                                    %(str3)s,%(str4)s,%(str5)s,%(str6)s,%(str7)s,%(real16)s,%(real4)s,%(real5)s,%(str8)s,%(str9)s,%(str10)s,%(str11)s,%(str12)s,%(str13)s,%(str14)s,%(str15)s,ST_GeomFromText(%(str16)s,25832))""",
+                                                {'str1': ImageID[i], 'float1': East[i], 'float2': North[i], 'real3': Height[i],
+                                                 'str2': Omega[i], 'str3': Phi[i], 'str4': Kappa[i], 'str5': Direction[i],
+                                                 'str6': TimeUTC[i], 'str7': CameraID[i], 'real16':coneid[i],
+                                                 'real4': EstAcc[i], 'real5': str(Height_Eli[i]), 'str8': TimeCET[i],
+                                                 'str9': ReferenceS[i], 'str10': Producer[i], 'str11': Level[i],
+                                                 'str12': str(Comment_co[i]), 'str13': str(Comment_sdfe[i]),
+                                                 'str14': str(Status[i]), 'str15': str(GSD[i]),
+                                                 'str16': str('POLYGON((' + finallist[i] + '))')})
+                                    IMupload.append('uploaded')
+                                    IMreason.append('not in DB')
+                                    DBY+=1
+                                else:
+                                    IMupload.append('not uploaded')
+                                    IMreason.append('allready in DB')
+                                    DBN+=1
+
+                        except psycopg2.IntegrityError:
+                            conn.rollback()
+                            print 'commit error - rolling back'
+                        else:
+                            conn.commit()
+
+                    except Exception, e:
+                        QMessageBox.information(None, "General Info", 'ERROR:', e[0])
+
+                        # add a feature
+                    for i in range(0,len(list)):
+                        newfeat = QgsFeature()
+                        newfeat.setGeometry(QgsGeometry.fromPolygon(list[i]))
+                        try:
+                            newfeat.setAttributes([ImageID[i], IMupload[i], IMreason[i]])
+                        except (RuntimeError, TypeError, NameError, ValueError):
+                            QMessageBox.information(None, "General Error", "PPC Format errors found, exiting!")
+                            return
+                        pr.addFeatures([newfeat])
+
+                    # update layer's extent when new features have been added
+                    # because change of extent in provider is not propagated to the layer
+                    vl.updateExtents()
+                    vl.updateFields()
+                    QgsMapLayerRegistry.instance().addMapLayer(vl)
+
+                    rapporten = "Upload of: \n" + inputFilNavn + "\n \nINFO: \n"
+                    rapporten = rapporten + str(DBY)+" of "+str(len(IMupload))+" footprints uploaded \n"
+                    rapporten = rapporten + str(DBN)+" footprints allready in DB \n"
+                    rapporten = rapporten + "\n See rapport file for specifics"
+                    QMessageBox.information(None, "Upload-DB", rapporten)
+
+                elif self.dlg.radioButtonDB_Nadir.isChecked():
+                    # Herunder skabes link til database
+                    DB_name = "geodanmark"
+                    DB_host = "c1200038"
+                    DB_port = "5432"
+                    DB_user = "postgres"
+                    DB_pass = "postgres"
+                    # Herunder opsttes tabellen der skal bruges. Findes tabellen ikke allerede opretts den
+                    DB_schema = "public"
+                    DB_geom = "geom"
+#                    DB_table = 'ppc2017'
+                    DB_table = 'ppc2017_test'
+
+                    conn = psycopg2.connect("dbname=" + DB_name + " user=" + DB_user + " host=" + DB_host + " password=" + DB_pass)
+                    cur = conn.cursor()
+
+                    cur.execute("select exists(select * from information_schema.tables where table_name=%s)",(DB_table,))
+                    if cur.fetchone()[0]:
+                        QMessageBox.information(None, "General Info", 'Database found - uploading')
+                    else:
+                        QMessageBox.information(None, "General Info", 'Creating database ' + DB_table)
+                        cur.execute(
+                            "CREATE TABLE " + DB_schema + "." + DB_table + "(imageid TEXT PRIMARY KEY, easting float, northing float, height real,omega real, phi real, Kappa real, timeutc text, cameraid text, height_eli text, timecet text, \"references\" text, producer text, level real, comment_co text, comment_sd text, status text, gsd text, geom geometry)")
+                        conn.commit()
+
+                    IDs = []
+                    cur.execute('SELECT * from ' + DB_table)
+                    rows = cur.fetchall()
+                    for row in rows:
+                        ii = row[0]
+                        IDs.append(ii)
+                    list = []
+                    finallist = []
+                    ImageID = []
+                    East = []
+                    North = []
+                    Height = []
+                    Omega = []
+                    Phi = []
+                    Kappa = []
+                    TimeUTC = []
+                    CameraID = []
+                    Height_Eli = []
+                    TimeCET = []
+                    ReferenceS = []
+                    Producer = []
+                    Level = []
+                    Comment_co = []
+                    Comment_sdfe = []
+                    Status = []
+                    GSD = []
+                    for feat in selection:
+                        #attrs = ft.attributes()
+                        ImageID.append(feat['ImageID'])
+                        East.append(feat['Easting'])
+                        North.append(feat['Northing'])
+                        Height.append(feat['Height'])
+                        Omega.append(feat['Omega'])
+                        Phi.append(feat['Phi'])
+                        Kappa.append(feat['Kappa'])
+                        TimeUTC.append(feat['TimeUTC'])
+                        CameraID.append(feat['CameraID'])
+                        Height_Eli.append(feat['Height_Eli'])
+                        TimeCET.append(feat['TimeCET'])
+                        ReferenceS.append(feat['ReferenceS'])
+                        Producer.append(feat['Producer'])
+                        Level.append(feat['Level'])
+                        Comment_co.append(feat['Comment_Co'])
+                        Comment_sdfe.append(feat['Comment_GS'])
+                        Status.append(feat['Status'])
+                        GSD.append(feat['GSD'])
+                        geom = feat.geometry()
+                        Geometri = geom.asPoint()
+                        list.append(Geometri)
+
+                    for ll in list:
+                        test = str(ll[0])
+                        test1 = test.replace("[", "")
+                        test2 = test1.replace("]", "")
+                        #test3 = test2.replace(",", " ")
+                        #test4 = test3.replace(")  (", "), (")
+                        test5 = test2.replace("(", "")
+                        test6 = test5.replace(")", "")
+                        finallist.append(test6)
+                    QMessageBox.information(None, "General Info", 'ERROR:', finallist[0])
+                    try:
+                        cur = conn.cursor()
+                        try:
+                            for i in range(0, (len(ImageID))):
+                                if ImageID[i] not in IDs:
+                                    cur.execute("""INSERT INTO """ + DB_table + """  ("imageid","easting","northing","height","omega","phi","kappa","timeutc","cameraid",
+                                                    "height_eli","timecet",\"references\","producer","level","comment_co","comment_sd","status","gsd","geom") VALUES(%(str1)s,%(float1)s,%(float2)s,%(real3)s,%(str2)s,
+                                                    %(str3)s,%(str4)s,%(str6)s,%(str7)s,%(real5)s,%(str8)s,%(str9)s,%(str10)s,%(str11)s,%(str12)s,%(str13)s,%(str14)s,%(str15)s,ST_GeomFromText(%(str16)s,25832))""",
+                                                {'str1': ImageID[i], 'float1': East[i], 'float2': North[i],
+                                                 'real3': Height[i],
+                                                 'str2': Omega[i], 'str3': Phi[i], 'str4': Kappa[i],
+                                                 'str6': TimeUTC[i], 'str7': CameraID[i],
+                                                 'real5': str(Height_Eli[i]), 'str8': TimeCET[i],
+                                                 'str9': ReferenceS[i], 'str10': Producer[i], 'str11': Level[i],
+                                                 'str12': str(Comment_co[i]), 'str13': str(Comment_sdfe[i]),
+                                                 'str14': str(Status[i]), 'str15': str(GSD[i]),
+                                                 'str16': str('POINT(' + test[i] + ')')})
+                                    
+                                else:
+                                    pass
+                                    #                                QMessageBox.information(None, "General Info", "Image: " + ImageID[i] + " Exsisted in DB")
+
+                        except psycopg2.IntegrityError:
+                            conn.rollback()
+                            print 'commit error - rolling back'
+                        else:
+                            conn.commit()
+
+                    except Exception, e:
+                        QMessageBox.information(None, "General Info", 'ERROR:', e[0])
 
                     # add a feature
                     newfeat = QgsFeature()
                     newfeat.setGeometry(QgsGeometry.fromPoint(Geometri))
                     try:
-                        newfeat.setAttributes(
-                            [ImageID, GSDpass, solVinkelen, SUNpass, "", TILTpass, REFpass, NameFormat, Orientation])
+                        newfeat.setAttributes(['test','test','test'])
                     except (RuntimeError, TypeError, NameError, ValueError):
                         QMessageBox.information(None, "General Error", "PPC Format errors found, exiting!")
                         return
 
                     pr.addFeatures([newfeat])
 
-                # update layer's extent when new features have been added
-                # because change of extent in provider is not propagated to the layer
-                vl.updateExtents()
-                vl.updateFields()
-                QgsMapLayerRegistry.instance().addMapLayer(vl)
+                    # update layer's extent when new features have been added
+                    # because change of extent in provider is not propagated to the layer
+                    vl.updateExtents()
+                    vl.updateFields()
+                    QgsMapLayerRegistry.instance().addMapLayer(vl)
+
+       # QMessageBox.information(self.iface.mainWindow(), 'DB-Upload', rapporten).lift()
 
     def checkA( self ):
         inputFilNavnPPC = unicode( self.dlg.inShapeAPPC.currentText() )
@@ -592,13 +743,14 @@ class PPC_check:
 
         mapCanvas = self.iface.mapCanvas()
         lyrs = self.iface.legendInterface().layers()
+        DB_list = ['ppc2017', 'footprint2017']
         lyr_list = []
         for layer in lyrs:
             lyr_list.append(layer.name())
         self.dlg.inShapeAPPC.clear()
         self.dlg.inShapeAPPC.addItems(lyr_list)
         self.dlg.inShapeAImage.clear()
-        self.dlg.inShapeAImage.addItems(lyr_list)
+        self.dlg.inShapeAImage.addItems(DB_list)
         self.dlg.inShapeDB.clear()
         self.dlg.inShapeDB.addItems(lyr_list)
 
@@ -633,7 +785,7 @@ class PPC_check:
                                 f = features.next()
                                 AttributesList = [c.name() for c in f.fields().toList()]
                                 if self.dlg.radioButtonPPC_ob.isChecked():
-                                    PossibleValues = ['ImageID','Easting','Northing','Height','Omega','Phi','Kappa','Direction','TimeUTC','CameraID','EstAcc','Height_Eli','TimeCET','ReferenceS','Producer','Level','Comment_Co','Comment_GS','Status','GSD']
+                                    PossibleValues = ['ImageID','Easting','Northing','Height','Omega','Phi','Kappa','Direction','TimeUTC','CameraID','ConeID','EstAcc','Height_Eli','TimeCET','ReferenceS','Producer','Level','Comment_Co','Comment_GS','Status','GSD']
                                 elif self.dlg.radioButtonPPC_Nadir.isChecked():
                                     PossibleValues = ['ImageID','Easting','Northing','Height','Omega','Phi','Kappa','TimeUTC','CameraID','Height_Eli','TimeCET','ReferenceS','Producer','Level','Comment_Co','Comment_GS','Status','GSD']
 
@@ -647,7 +799,7 @@ class PPC_check:
                                     #QMessageBox.information(None, "status", "File conforms to SDFE standard!")
                                 elif len(AttributesList) < n:
                                     if self.dlg.radioButtonPPC_ob.isChecked():
-                                        QMessageBox.information(None, "status", "Files is missing some attributes. \n Check that the following fields are pressent in the attributes table header: \n 'ImageID','Easting','Northing','Height','Omega','Phi','Kappa','Direction','TimeUTC','CameraID','EstAcc','Height_Eli',\n'TimeCET','ReferenceS','Producer','Level','Comment_Co','Comment_GS','Status','GSD'" )
+                                        QMessageBox.information(None, "status", "Files is missing some attributes. \n Check that the following fields are pressent in the attributes table header: \n 'ImageID','Easting','Northing','Height','Omega','Phi','Kappa','Direction','TimeUTC','CameraID','ConeID','EstAcc','Height_Eli',\n'TimeCET','ReferenceS','Producer','Level','Comment_Co','Comment_GS','Status','GSD'" )
                                     elif self.dlg.radioButtonPPC_Nadir.isChecked():
                                         QMessageBox.information(None, "status", "Files is missing some attributes. \n Check that the following fields are pressent in the attributes table header: \n 'ImageID','Easting','Northing','Height','Omega','Phi','Kappa','TimeUTC','CameraID','Height_Eli',\n'TimeCET','ReferenceS','Producer','Level','Comment_Co','Comment_GS','Status'")
                                     return
@@ -1095,363 +1247,6 @@ class PPC_check:
                     QMessageBox.information(None, "General Error", "General file error V2.1, please check that you have choosen the correct PPC file")
                     return
 
-            if str(currentIndex) == "2":
-                # QMessageBox.information(None, "index: ", str(currentIndex))
-                import subprocess
-                inputLayer = unicode(self.dlg.inShapeAImage.currentText())
-                inputFilNavn = self.dlg.inShapeAImage.currentText()
-                ImageDirPath = str(self.dlg.lineEditImageDir.text())
-
-                canvas = self.iface.mapCanvas()
-                allLayers = canvas.layers()
-                try:
-                    count = 0
-                    #for i in allLayers:
-                    #    if (i.name() == inputFilNavn):
-                    #        layer = i
-
-                    # create virtual layer
-                    vl = QgsVectorLayer("Point", "Image-check: " + str(ntpath.basename(ImageDirPath)), "memory")
-                    pr = vl.dataProvider()
-
-                    ImDFail = 0
-                    ImFFail = 0
-                    SizeFailCount = 0
-                    CompFailCount = 0
-                    # vl.startEditing()
-                    # add fields
-                    pr.addAttributes([QgsField("ImageID", QVariant.String),
-                                      QgsField("Dirver", QVariant.String),
-                                      QgsField("Image Size", QVariant.String),
-                                      QgsField("Pixel Sixe", QVariant.String),
-                                      QgsField("Format", QVariant.String)])
-
-                    #if self.dlg.useSelectedAImage.isChecked():
-                    #    selection = layer.selectedFeatures()
-                    #    QMessageBox.information(None, "status", "checking selected features")
-                    #else:
-                    #    selection = layer.getFeatures()
-                    #    QMessageBox.information(None, "status", "checking all features")
-
-                    #for feat in selection:
-                    #    geom = feat.geometry().centroid()
-                    #    Geometri = geom.asPoint()
-                    resultstemp=[]
-                    ImageDriver = "Image Driver not checked"
-                    ImageSize = "Image size not checked"
-                    ImageNameCheck = "Image Name not Checked"
-                    ImageFormat = "Image format not checked"
-                    resolution = "resolution not checked"
-                    ImDOK = 0
-                    ImDFail = 0
-                    ImFOK = 0
-                    ImFFail = 0
-                    SizeFailCount = 0
-                    CompFailCount = 0
-                    #load data (oblique or Nadir):
-                    if self.dlg.radioButtonImage_ob.isChecked():
-                        QMessageBox.information(None, "OBS - Oblique dataset", "Processing may take a couple of minutes!")
-                        ImageDirPath = ImageDirPath.replace("\\", "/")
-                        tt = os.listdir(ImageDirPath + "/001/0001")
-                        if tt[0].endswith('.jpg'):
-                            result = self.readdata(ImageDirPath)
-                        elif tt[0].endswith('.tif'):
-                            result = self.readdata(ImageDirPath)
-                    elif self.dlg.radioButtonImage_Nadir.isChecked():
-                        resulttemp = os.listdir(ImageDirPath)
-                        result=[]
-                        for ii in resulttemp:
-                            result.append(ImageDirPath+'\\'+str(ii))
-
-                    for filename in result:
-                        # Check fileformat/driver conformity
-                        if self.dlg.checkBoxSize.isChecked():
-                            datafile = gdal.Open(filename)
-                            geoinformation = datafile.GetGeoTransform()
-                            cols = datafile.RasterXSize
-
-                        if self.dlg.checkBoxNaming.isChecked():
-                            if self.dlg.radioButtonImage_ob.isChecked():
-                                patternImageID = re.compile("[0-9]{3}_[0-9]{4}_[0-9]{8}")
-                                fff = ntpath.basename(filename)
-                                if self.dlg.checkBoxPic.isChecked():
-                                    if patternImageID.match(fff):
-                                        ImageNameCheck = "ImageID - OK"
-                                    else:
-                                        ImageNameCheck = "ImageID - Fail"
-                            elif self.dlg.radioButtonImage_Nadir.isChecked():
-                                patternImageID = re.compile("[0-9]{4}_[0-9]{1}km_[0-9]{4}_[0-9]{3}")
-                                fff = ntpath.basename(filename)
-                                if self.dlg.checkBoxPic.isChecked():
-                                    if patternImageID.match(fff):
-                                        ImageNameCheck = "ImageID - OK"
-                                    else:
-                                        ImageNameCheck = "ImageID - Fail"
-
-                        #QMessageBox.information(None, "General Error", res)
-                        # add image info to DB
-
-
-                        #add a feature
-                        #if self.dlg.useSelectedAImage.isChecked():
-                        #    selection = layer.selectedFeatures()
-                        #else:
-                        #    selection = layer.getFeatures()
-                        ff = ntpath.basename(filename)
-                        imdirpth=ntpath.basename(ImageDirPath)
-                        #for feat in selection:
-                        #    if ff==feat['ImageID']:
-                        #geom = feat.geometry().centroid()
-                        #Geometri = geom.asPoint()
-                        newfeat = QgsFeature()
-                        #newfeat.setGeometry(QgsGeometry.fromPoint(Geometri))
-                        try:
-                            newfeat.setAttributes([ff,ImageDriver,ImageSize,resolution,ImageNameCheck])
-                            #newfeat.setAttributes([filename, Driverl, ImageSize, we_res+"x"+ns_res,ImageFormat,"comp - ok","direction"])
-                        except (RuntimeError, TypeError, NameError, ValueError):
-                            QMessageBox.information(None, "General Error", "PPC Format errors found, exiting!")
-
-                        pr.addFeatures([newfeat])
-
-
-                    vl.updateExtents()
-                    vl.updateFields()
-                    QgsMapLayerRegistry.instance().addMapLayer(vl)
-
-                    rapportenI = "Check of: \n" + imdirpth + "\n \nThere was found: \n" + str(ImDFail)+" Image Format Failure \n" +  str(SizeFailCount) + " Images of wrong size"
-                    if ImDFail+ImFFail+SizeFailCount+CompFailCount == 0:
-                        QMessageBox.information(self.iface.mainWindow(),'PPC check',rapportenI)
-                    else:
-                        QMessageBox.critical(self.iface.mainWindow(),'PPC check',rapportenI)
-                    self.dlg.close()
-                    return
-                except (RuntimeError, TypeError, NameError): #, ValueError):
-                    QMessageBox.information(None, "General Error", "General file error V2.1, please check that you have choosen the correct PPC file")
-                    return
-
-
-            if str(currentIndex) == "3":
-                # QMessageBox.information(None, "index: ", str(currentIndex))
-                import subprocess
-                inputLayer = unicode(self.dlg.inShapeAImage.currentText())
-                inputFilNavn = self.dlg.inShapeAImage.currentText()
-                ImageDirPath = str(self.dlg.lineEditImageDir.text())
-
-                canvas = self.iface.mapCanvas()
-                allLayers = canvas.layers()
-                try:
-                    count = 0
-                    #for i in allLayers:
-                    #    if (i.name() == inputFilNavn):
-                    #        layer = i
-
-                    # create virtual layer
-                    vl = QgsVectorLayer("Point", "Image-check: " + str(ntpath.basename(ImageDirPath)), "memory")
-                    pr = vl.dataProvider()
-
-                    ImDFail = 0
-                    ImFFail = 0
-                    SizeFailCount = 0
-                    CompFailCount = 0
-                    # vl.startEditing()
-                    # add fields
-                    pr.addAttributes([QgsField("ImageID", QVariant.String),
-                                      QgsField("Dirver", QVariant.String),
-                                      QgsField("Image Size", QVariant.String),
-                                      QgsField("Pixel Sixe", QVariant.String),
-                                      QgsField("Format", QVariant.String)])
-
-                    #if self.dlg.useSelectedAImage.isChecked():
-                    #    selection = layer.selectedFeatures()
-                    #    QMessageBox.information(None, "status", "checking selected features")
-                    #else:
-                    #    selection = layer.getFeatures()
-                    #    QMessageBox.information(None, "status", "checking all features")
-
-                    #for feat in selection:
-                    #    geom = feat.geometry().centroid()
-                    #    Geometri = geom.asPoint()
-
-                    ImageDriver = "Image Driver not checked"
-                    ImageSize = "Image size not checked"
-                    ImageNameCheck = "Image Name not Checked"
-                    ImageFormat = "Image format not checked"
-                    resolution = "resolution not checked"
-                    ImDOK = 0
-                    ImDFail = 0
-                    ImFOK = 0
-                    ImFFail = 0
-                    SizeFailCount = 0
-                    CompFailCount = 0
-                    #load data (oblique or Nadir):
-                    if self.dlg.radioButtonImage_ob.isChecked():
-                        QMessageBox.information(None, "OBS - Oblique dataset", "Processing may take a couple of minutes!")
-                        ImageDirPath = ImageDirPath.replace("\\", "/")
-                        tt = os.listdir(ImageDirPath + "/001/0001")
-                        if tt[0].endswith('.jpg'):
-                            result = self.readdata(ImageDirPath)
-                        elif tt[0].endswith('.tif'):
-                            result = self.readdata(ImageDirPath)
-                    elif self.dlg.radioButtonImage_Nadir.isChecked():
-                        resulttemp = os.listdir(ImageDirPath)
-                        result=[]
-                        for ii in resulttemp:
-                            result.append(ImageDirPath+'\\'+str(ii))
-
-                    for filename in result:
-                        # Check fileformat/driver conformity
-                        if self.dlg.checkBoxNaming.isChecked():
-                            try:
-                                if filename.endswith(".tif"):
-                                    datafile = gdal.Open(filename)
-                                    Drivers = datafile.GetDriver().ShortName
-                                    Driverl = datafile.GetDriver().LongName
-                                    if str(Drivers) == "GTiff":
-                                        ID = str(Driverl)
-                                        string = " - OK"
-                                        ImageDriver = "{} {}".format(ID, string)
-                                        ImDOK = ImDOK + 1
-                                    elif str(Drivers) != "GTiff":
-                                        ID = str(Driverl)
-                                        string = " - Fail"
-                                        ImageDriver = "{} {}".format(ID, string)
-                                        ImDFail = ImDFail + 1
-                                elif filename.endswith(".jpg"):
-                                    datafile = gdal.Open(filename)
-                                    Drivers = datafile.GetDriver().ShortName
-                                    if str(Drivers) == "JPEG":
-                                        ID = str(Drivers)
-                                        string = " - OK"
-                                        ImageDriver = "{} {}".format(ID, string)
-                                        ImDOK = ImDOK + 1
-                                    elif str(Drivers) != "JPEG":
-                                        ID = str(Drivers)
-                                        string = " - Fail"
-                                        ImageDriver = "{} {}".format(ID, string)
-                                        ImDFail = ImDFail + 1
-
-                            except (RuntimeError, TypeError, NameError, ValueError):
-                                QMessageBox.information(None, "General Error","Image Driver errors found, exiting!")
-                                return
-
-                        if self.dlg.checkBoxSize.isChecked():
-                            datafile = gdal.Open(filename)
-                            geoinformation = datafile.GetGeoTransform()
-                            cols = datafile.RasterXSize
-                            rows = datafile.RasterYSize
-                            we_res = geoinformation[1]
-                            ns_res = geoinformation[5]
-                            if str(cols) == str(rows):
-                                if self.dlg.radioButton8000.isChecked():
-                                    string1="x"
-                                    var1=str(we_res)
-                                    var2=str(ns_res)
-                                    resolution="{}{}{}".format(var1,string1,var2)
-                                    if str(cols) == "8000":
-                                        var1=str(rows)
-                                        var2=str(cols)
-                                        string1 = "Size(8000x8000): "
-                                        string2 = "x"
-                                        string3 = " - OK"
-                                        ImageSize = "{}{}{}{}{}".format(string1,var1,string2,var2,string3)
-                                    elif str(cols) != "8000":
-                                        var1 = str(rows)
-                                        var2 = str(cols)
-                                        string1 = "Size(8000x8000): "
-                                        string2 = "x"
-                                        string3 = " - Fail"
-                                        ImageSize = "{}{}{}{}{}".format(string1, var1, string2, var2, string3)
-                                        SizeFailCount = SizeFailCount + 1
-                                elif self.dlg.radioButton5000.isChecked():
-                                    string1="x"
-                                    var1=str(we_res)
-                                    var2=str(ns_res)
-                                    resolution="{}{}{}".format(var1,string1,var2)
-                                    if str(cols) == "5000":
-                                        var1=str(rows)
-                                        var2=str(cols)
-                                        string1 = "Size(5000x5000): "
-                                        string2 = "x"
-                                        string3 = " - OK"
-                                        ImageSize = "{}{}{}{}{}".format(string1,var1,string2,var2,string3)
-                                    elif str(cols) != "5000":
-                                        var1=str(rows)
-                                        var2=str(cols)
-                                        string1 = "Size(5000x5000): "
-                                        string2 = "x"
-                                        string3 = " - Fail"
-                                        ImageSize = "{}{}{}{}{}".format(string1,var1,string2,var2,string3)
-                                        SizeFailCount = SizeFailCount + 1
-                            elif str(cols) != str(rows):
-                                string1 = "x"
-                                var1 = str(we_res)
-                                var2 = str(ns_res)
-                                string2 = str(cols)
-                                string3 = str(rows)
-                                string4 = " - Fail"
-                                resolution = "{}{}{}".format(var1, string1, var2)
-                                SizeFailCount = SizeFailCount + 1
-                                ImageSize = "{}{}{}{}".format(string2, string1, string3,string4)
-
-                        if self.dlg.checkBoxNaming.isChecked():
-                            if self.dlg.radioButtonImage_ob.isChecked():
-                                patternImageID = re.compile("[0-9]{3}_[0-9]{4}_[0-9]{8}")
-                                fff = ntpath.basename(filename)
-                                if self.dlg.checkBoxPic.isChecked():
-                                    if patternImageID.match(fff):
-                                        ImageNameCheck = "ImageID - OK"
-                                    else:
-                                        ImageNameCheck = "ImageID - Fail"
-                            elif self.dlg.radioButtonImage_Nadir.isChecked():
-                                patternImageID = re.compile("[0-9]{4}_[0-9]{1}km_[0-9]{4}_[0-9]{3}")
-                                fff = ntpath.basename(filename)
-                                if self.dlg.checkBoxPic.isChecked():
-                                    if patternImageID.match(fff):
-                                        ImageNameCheck = "ImageID - OK"
-                                    else:
-                                        ImageNameCheck = "ImageID - Fail"
-
-                        #QMessageBox.information(None, "General Error", res)
-                        # add image info to DB
-
-
-                        #add a feature
-                        #if self.dlg.useSelectedAImage.isChecked():
-                        #    selection = layer.selectedFeatures()
-                        #else:
-                        #    selection = layer.getFeatures()
-                        ff = ntpath.basename(filename)
-                        imdirpth=ntpath.basename(ImageDirPath)
-                        #for feat in selection:
-                        #    if ff==feat['ImageID']:
-                        #geom = feat.geometry().centroid()
-                        #Geometri = geom.asPoint()
-                        newfeat = QgsFeature()
-                        #newfeat.setGeometry(QgsGeometry.fromPoint(Geometri))
-                        try:
-                            newfeat.setAttributes([ff,ImageDriver,ImageSize,resolution,ImageNameCheck])
-                            #newfeat.setAttributes([filename, Driverl, ImageSize, we_res+"x"+ns_res,ImageFormat,"comp - ok","direction"])
-                        except (RuntimeError, TypeError, NameError, ValueError):
-                            QMessageBox.information(None, "General Error", "PPC Format errors found, exiting!")
-
-                        pr.addFeatures([newfeat])
-
-
-                    vl.updateExtents()
-                    vl.updateFields()
-                    QgsMapLayerRegistry.instance().addMapLayer(vl)
-
-                    rapportenI = "Check of: \n" + imdirpth + "\n \nThere was found: \n" + str(ImDFail)+" Image Format Failure \n" +  str(SizeFailCount) + " Images of wrong size"
-                    if ImDFail+ImFFail+SizeFailCount+CompFailCount == 0:
-                        QMessageBox.information(self.iface.mainWindow(),'PPC check',rapportenI)
-                    else:
-                        QMessageBox.critical(self.iface.mainWindow(),'PPC check',rapportenI)
-                    self.dlg.close()
-                    return
-                except (RuntimeError, TypeError, NameError): #, ValueError):
-                    QMessageBox.information(None, "General Error", "General file error V2.1, please check that you have choosen the correct PPC file")
-                    return
-
             if str(currentIndex) == "3":
                 import subprocess
                 inputLayer = unicode(self.dlg.inShapeAImage.currentText())
@@ -1479,23 +1274,18 @@ class PPC_check:
                                 ImageIDext = []
                                 ImageID = []
                                 ImageIDIM = []
-                                if self.dlg.useSelectedAImage.isChecked():
-                                    selection = layer.selectedFeatures()
-                                    QMessageBox.information(None, "status", "checking selected features")
-                                else:
-                                    selection = layer.getFeatures()
-                                    QMessageBox.information(None, "status", "checking all features")
+                                selection = layer.getFeatures()
                                 for ft in selection:
                                     attrs = ft.attributes()
                                     ImageIDext.append(attrs[0])
                                 for i in range(0, len(ImageIDext)):
                                     ImageIDext[i] = ImageIDext[i] + ".tif"
 
-                                if self.dlg.radioButtonDB_ob.isChecked():
+                                if self.dlg.radioButtonDBQC_ob.isChecked():
                                     ImageDirPath = ImageDirPath.replace("\\", "/")
                                     #tt = os.listdir(ImageDirPath + "/001/0001")
                                     ImageIDIM = self.readdata(ImageDirPath)
-                                elif self.dlg.radioButtonDB_Nadir.isChecked():
+                                elif self.dlg.radioButtonDBQC_Nadir.isChecked():
                                     resulttemp = os.listdir(ImageDirPath)
                                     for ii in resulttemp:
                                         ImageIDIM.append(ImageDirPath + '\\' + str(ii))
