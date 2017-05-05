@@ -240,7 +240,7 @@ class PPC_check:
                         QMessageBox.information(None, "General Info",'Database found - uploading')
                     else:
                         QMessageBox.information(None, "General Info", 'Creating database ' + DB_table)
-                        cur.execute("CREATE TABLE " + DB_schema + "." + DB_table + "(imageid TEXT PRIMARY KEY, easting float, northing float, height real,omega real, phi real, kappa real, direction text, timeutc text, cameraid text, coneid real, estacc real, height_eli text, timecet text, \"references\" text, producer text, level real, comment_co text, comment_sd text, status text, gsd text, geom geometry)")
+                        cur.execute("CREATE TABLE " + DB_schema + "." + DB_table + "(imageid TEXT PRIMARY KEY, easting float, northing float, height real,omega real, phi real, kappa real, direction text, timeutc text, cameraid text, coneid real, estacc real, height_eli text, timecet text, \"references\" text, producer text, level real, comment_co text, comment_gs text, status text, gsd text, geom geometry)")
                         conn.commit()
 
                     IDs = []
@@ -312,6 +312,7 @@ class PPC_check:
                         test5 = test4.replace("(", "")
                         test6 = test5.replace(")", "")
                         finallist.append(test6)
+                    #QMessageBox.information(None, "General Error", "length of file: "+str(len(list)))
 
                     try:
                         cur = conn.cursor()
@@ -319,7 +320,7 @@ class PPC_check:
                             for i in range(0, (len(ImageID))):
                                 if ImageID[i] not in IDs:
                                     cur.execute("""INSERT INTO """+DB_table+"""  ("imageid","easting","northing","height","omega","phi","kappa","direction","timeutc","cameraid","coneid","estacc",
-                                    "height_eli","timecet",\"references\","producer","level","comment_co","comment_sd","status","gsd","geom") VALUES(%(str1)s,%(float1)s,%(float2)s,%(real3)s,%(str2)s,
+                                    "height_eli","timecet",\"references\","producer","level","comment_co","comment_gs","status","gsd","geom") VALUES(%(str1)s,%(float1)s,%(float2)s,%(real3)s,%(str2)s,
                                     %(str3)s,%(str4)s,%(str5)s,%(str6)s,%(str7)s,%(real16)s,%(real4)s,%(real5)s,%(str8)s,%(str9)s,%(str10)s,%(str11)s,%(str12)s,%(str13)s,%(str14)s,%(str15)s,ST_GeomFromText(%(str16)s,25832))""",
                                                 {'str1': ImageID[i], 'float1': East[i], 'float2': North[i], 'real3': Height[i],
                                                  'str2': Omega[i], 'str3': Phi[i], 'str4': Kappa[i], 'str5': Direction[i],
@@ -336,7 +337,6 @@ class PPC_check:
                                     IMupload.append('not uploaded')
                                     IMreason.append('allready in DB')
                                     DBN+=1
-
                         except psycopg2.IntegrityError:
                             conn.rollback()
                             print 'commit error - rolling back'
@@ -346,6 +346,8 @@ class PPC_check:
                     except Exception, e:
                         QMessageBox.information(None, "General Info", 'ERROR:', e[0])
 
+                    #QMessageBox.information(None, "General Error", "number of images that cant be uploaded vs images the can: "+str(DBN) + "." + str(DBY))
+                    #QMessageBox.information(None, "General Error", "ImageID of last number befor error:" + str(ImageID[DBY]))
                         # add a feature
                     for i in range(0,len(list)):
                         newfeat = QgsFeature()
@@ -379,8 +381,7 @@ class PPC_check:
                     # Herunder opsttes tabellen der skal bruges. Findes tabellen ikke allerede opretts den
                     DB_schema = "public"
                     DB_geom = "geom"
-#                    DB_table = 'ppc2017'
-                    DB_table = 'ppc2017_test'
+                    DB_table = 'ppc2017'
 
                     conn = psycopg2.connect("dbname=" + DB_name + " user=" + DB_user + " host=" + DB_host + " password=" + DB_pass)
                     cur = conn.cursor()
@@ -391,7 +392,7 @@ class PPC_check:
                     else:
                         QMessageBox.information(None, "General Info", 'Creating database ' + DB_table)
                         cur.execute(
-                            "CREATE TABLE " + DB_schema + "." + DB_table + "(imageid TEXT PRIMARY KEY, easting float, northing float, height real,omega real, phi real, Kappa real, timeutc text, cameraid text, height_eli text, timecet text, \"references\" text, producer text, level real, comment_co text, comment_sd text, status text, gsd text, geom geometry)")
+                            "CREATE TABLE " + DB_schema + "." + DB_table + "(imageid TEXT PRIMARY KEY, easting float, northing float, height real,omega real, phi real, Kappa real, timeutc text, cameraid text, height_eli text, timecet text, \"references\" text, producer text, level real, comment_co text, comment_gs text, status text, gsd text, geom geometry)")
                         conn.commit()
 
                     IDs = []
@@ -420,6 +421,10 @@ class PPC_check:
                     Comment_sdfe = []
                     Status = []
                     GSD = []
+                    IMupload=[]
+                    IMreason=[]
+                    DBY=0
+                    DBN=0
                     for feat in selection:
                         #attrs = ft.attributes()
                         ImageID.append(feat['ImageID'])
@@ -445,22 +450,21 @@ class PPC_check:
                         list.append(Geometri)
 
                     for ll in list:
-                        test = str(ll[0])
+                        test = str(ll)
                         test1 = test.replace("[", "")
                         test2 = test1.replace("]", "")
-                        #test3 = test2.replace(",", " ")
-                        #test4 = test3.replace(")  (", "), (")
-                        test5 = test2.replace("(", "")
+                        test3 = test2.replace(",", " ")
+                        test4 = test3.replace(")  (", "), (")
+                        test5 = test4.replace("(", "")
                         test6 = test5.replace(")", "")
                         finallist.append(test6)
-                    QMessageBox.information(None, "General Info", 'ERROR:', finallist[0])
                     try:
                         cur = conn.cursor()
                         try:
                             for i in range(0, (len(ImageID))):
                                 if ImageID[i] not in IDs:
                                     cur.execute("""INSERT INTO """ + DB_table + """  ("imageid","easting","northing","height","omega","phi","kappa","timeutc","cameraid",
-                                                    "height_eli","timecet",\"references\","producer","level","comment_co","comment_sd","status","gsd","geom") VALUES(%(str1)s,%(float1)s,%(float2)s,%(real3)s,%(str2)s,
+                                                    "height_eli","timecet",\"references\","producer","level","comment_co","comment_gs","status","gsd","geom") VALUES(%(str1)s,%(float1)s,%(float2)s,%(real3)s,%(str2)s,
                                                     %(str3)s,%(str4)s,%(str6)s,%(str7)s,%(real5)s,%(str8)s,%(str9)s,%(str10)s,%(str11)s,%(str12)s,%(str13)s,%(str14)s,%(str15)s,ST_GeomFromText(%(str16)s,25832))""",
                                                 {'str1': ImageID[i], 'float1': East[i], 'float2': North[i],
                                                  'real3': Height[i],
@@ -470,11 +474,14 @@ class PPC_check:
                                                  'str9': ReferenceS[i], 'str10': Producer[i], 'str11': Level[i],
                                                  'str12': str(Comment_co[i]), 'str13': str(Comment_sdfe[i]),
                                                  'str14': str(Status[i]), 'str15': str(GSD[i]),
-                                                 'str16': str('POINT(' + test[i] + ')')})
-                                    
+                                                 'str16': str('POINT(' + finallist[i] + ')')})
+                                    IMupload.append('uploaded')
+                                    IMreason.append('not in DB')
+                                    DBY += 1
                                 else:
-                                    pass
-                                    #                                QMessageBox.information(None, "General Info", "Image: " + ImageID[i] + " Exsisted in DB")
+                                    IMupload.append('not uploaded')
+                                    IMreason.append('allready in DB')
+                                    DBN += 1
 
                         except psycopg2.IntegrityError:
                             conn.rollback()
@@ -486,15 +493,16 @@ class PPC_check:
                         QMessageBox.information(None, "General Info", 'ERROR:', e[0])
 
                     # add a feature
-                    newfeat = QgsFeature()
-                    newfeat.setGeometry(QgsGeometry.fromPoint(Geometri))
-                    try:
-                        newfeat.setAttributes(['test','test','test'])
-                    except (RuntimeError, TypeError, NameError, ValueError):
-                        QMessageBox.information(None, "General Error", "PPC Format errors found, exiting!")
-                        return
-
-                    pr.addFeatures([newfeat])
+                        # add a feature
+                    for i in range(0,len(list)):
+                        newfeat = QgsFeature()
+                        newfeat.setGeometry(QgsGeometry.fromPoint(list[i]))
+                        try:
+                            newfeat.setAttributes([ImageID[i], IMupload[i], IMreason[i]])
+                        except (RuntimeError, TypeError, NameError, ValueError):
+                            QMessageBox.information(None, "General Error", "PPC Format errors found, exiting!")
+                            return
+                        pr.addFeatures([newfeat])
 
                     # update layer's extent when new features have been added
                     # because change of extent in provider is not propagated to the layer
@@ -502,7 +510,12 @@ class PPC_check:
                     vl.updateFields()
                     QgsMapLayerRegistry.instance().addMapLayer(vl)
 
-       # QMessageBox.information(self.iface.mainWindow(), 'DB-Upload', rapporten).lift()
+                    rapporten = "Upload of: \n" + inputFilNavn + "\n \nINFO: \n"
+                    rapporten = rapporten + str(DBY)+" of "+str(len(IMupload))+" footprints uploaded \n"
+                    rapporten = rapporten + str(DBN)+" footprints allready in DB \n"
+                    rapporten = rapporten + "\n See rapport file for specifics"
+                    QMessageBox.information(None, "Upload-DB", rapporten)
+
 
     def checkA( self ):
         inputFilNavnPPC = unicode( self.dlg.inShapeAPPC.currentText() )
@@ -1252,142 +1265,177 @@ class PPC_check:
                 inputLayer = unicode(self.dlg.inShapeAImage.currentText())
 
                 ImageDirPath = str(self.dlg.lineEditDBImageDir.text())
+                ImageDirPath = ImageDirPath.replace("\\", "/")
                 inputFilNavn = self.dlg.inShapeAImage.currentText()
 
-                canvas = self.iface.mapCanvas()
-                allLayers = canvas.layers()
+                DB_name = "geodanmark"
+                DB_host = "c1200038"
+                DB_port = "5432"
+                DB_user = "postgres"
+                DB_pass = "postgres"
+                # Herunder opsttes tabellen der skal bruges. Findes tabellen ikke allerede opretts den
+                DB_schema = "public"
+                DB_geom = "geom"
+                DB_table = 'footprints2017_test'
+                # DB_table = 'oblique_2017_check_table'
+
+                conn = psycopg2.connect("dbname=" + DB_name + " user=" + DB_user + " host=" + DB_host + " password=" + DB_pass)
+                cur = conn.cursor()
+
+                cur.execute("select exists(select * from information_schema.tables where table_name=%s)", (DB_table,))
+                if cur.fetchone()[0]:
+                    QMessageBox.information(None, "General Info", 'Database found')
+                else:
+                    QMessageBox.information(None, "General Info", 'Database: '+DB_table+' not found ')
+
+                ImageID = []
+                ImageID1 = []
+                East = []
+                North = []
+                Height = []
+                Omega = []
+                Phi = []
+                Kappa = []
+                Direction = []
+                TimeUTC = []
+                CameraID = []
+                coneid = []
+                EstAcc = []
+                Height_Eli = []
+                TimeCET = []
+                ReferenceS = []
+                Producer = []
+                Level = []
+                Comment_co = []
+                Comment_sdfe = []
+                Status = []
+                GSD = []
+                ImageNames=[]
+                ImageID2 = []
+                cur.execute('SELECT * from ' + DB_table)
+                rows = cur.fetchall()
+                for row in rows:
+                    ImageID.append(row[0])
+                    East.append(row[1])
+                    North.append(row[2])
+                    Height.append(row[3])
+                    Omega.append(row[4])
+                    Phi.append(row[5])
+                    Kappa.append(row[6])
+                    Direction.append(row[7])
+                    TimeUTC.append(row[8])
+                    CameraID.append(row[9])
+                    coneid.append(row[10])
+                    EstAcc.append(row[11])
+                    Height_Eli.append(row[12])
+                    TimeCET.append(row[13])
+                    ReferenceS.append(row[14])
+                    Producer.append(row[15])
+                    Level.append(row[16])
+                    Comment_co.append(row[17])
+                    Comment_sdfe.append(row[18])
+                    Status.append(row[19])
+                    GSD.append(row[20])
+
+                for i in ImageID:
+                    ImageID1.append(i + ".tif")
+
 
                 try:
-                    count = 0
-
-                    for i in allLayers:
-
-                        #QMessageBox.information(None, "status",i.name())
-                        if(i.name() == inputFilNavn):
-                            layer=i
-
-                            # create virtual layer
-                            vl = QgsVectorLayer("Point", "Image-check: " + str(ntpath.basename(ImageDirPath)), "memory")
-                            pr = vl.dataProvider()
-
-                            if self.dlg.checkBoxComp.isChecked():
-                                ImageIDext = []
-                                ImageID = []
-                                ImageIDIM = []
-                                selection = layer.getFeatures()
-                                for ft in selection:
-                                    attrs = ft.attributes()
-                                    ImageIDext.append(attrs[0])
-                                for i in range(0, len(ImageIDext)):
-                                    ImageIDext[i] = ImageIDext[i] + ".tif"
-
-                                if self.dlg.radioButtonDBQC_ob.isChecked():
-                                    ImageDirPath = ImageDirPath.replace("\\", "/")
-                                    #tt = os.listdir(ImageDirPath + "/001/0001")
-                                    ImageIDIM = self.readdata(ImageDirPath)
-                                elif self.dlg.radioButtonDBQC_Nadir.isChecked():
-                                    resulttemp = os.listdir(ImageDirPath)
-                                    for ii in resulttemp:
-                                        ImageIDIM.append(ImageDirPath + '\\' + str(ii))
-                                for i in ImageIDIM:
-                                    ImageID.append(os.path.basename(os.path.normpath(i)))
-
-                                imdirpth = ntpath.basename(ImageDirPath)
-                                Comparison1 = []
-                                Comparison2 = []
-                                FP_in_IM = []
-                                FP_not_in_IM = []
-                                Images_in_FP = []
-                                Images_not_in_FP = []
-                                nlist=[]
-                                ImDFail = 0
-                                ImFFail = 0
-                                SizeFailCount = 0
-                                CompFailCount = 0
-                                for i in ImageIDext:
-                                    if i in ImageID:
-                                        FP_in_IM.append(i)
-                                        Comparison1.append("OK - Footprint has associated Image")
-                                    else:
-                                        FP_not_in_IM.append(i)
-                                        Comparison2.append("Fail - Footprint does not have associated Image")
-                                for i in ImageID:
-                                    if i in ImageIDext:
-                                        Images_in_FP.append(i)
-                                        Comparison1.append("OK - Image has associated footprint")
-                                    else:
-                                        Images_not_in_FP.append(i)
-                                        Comparison2.append("Fail - Image does not have associated footprint")
-
-                                # add fields
-                                pr.addAttributes([QgsField("ID", QVariant.String),
-                                                  QgsField("ImageID", QVariant.String),
-                                                  QgsField("FootprintID", QVariant.String),
-                                                  QgsField("Comparison", QVariant.String)])
-
-                                if len(ImageID) < len(ImageIDext):
-                                    rng = len(ImageIDext) + len(Images_not_in_FP)
-                                    dif = len(Images_in_FP)
-                                elif len(ImageID) > len(ImageIDext):
-                                    rng = len(ImageID) + len(FP_not_in_IM)
-                                    dif = len(FP_in_IM)
-                                ImageIDext.sort()
-                                if self.dlg.useSelectedAImage.isChecked():
-                                    selection = layer.selectedFeatures()
-                                else:
-                                    selection = layer.getFeatures()
-
-                                for feat in selection:
-                                    geom = feat.geometry().centroid()
-                                    Geometri = geom.asPoint()
-                                    nlist.append(Geometri)
-
-                                for i in range(0,rng):
-                                    # add a feature
-                                    newfeat = QgsFeature()
-                                    if i < dif:
-                                        newfeat.setGeometry(QgsGeometry.fromPoint(nlist[i]))
-                                        try:
-                                            newfeat.setAttributes([i, ImageID[i], ImageID[i],Comparison1[i]])
-                                        except (RuntimeError, TypeError, NameError, ValueError):
-                                            QMessageBox.information(None, "General Error","PPC Format errors found, exiting!")
-                                    elif dif <= i < (dif + len(FP_not_in_IM)):
-                                        newfeat.setGeometry(QgsGeometry.fromPoint(nlist[i]))
-                                        if len(ImageID) < len(ImageIDext):
-                                            try:
-                                                newfeat.setAttributes([i, '', FP_not_in_IM[i - dif], Comparison2[i - dif]])
-                                            except (RuntimeError, TypeError, NameError, ValueError):
-                                                QMessageBox.information(None, "General Error","PPC Format errors found, exiting!")
-                                        elif len(ImageID) > len(ImageIDext):
-                                            try:
-                                                newfeat.setAttributes([i, '', FP_not_in_IM[i-dif], Comparison2[i - dif]])
-                                            except (RuntimeError, TypeError, NameError, ValueError):
-                                                QMessageBox.information(None, "General Error","PPC Format errors found, exiting!")
-                                    else:
-                                        if len(ImageID) < len(ImageIDext):
-                                            try:
-                                                newfeat.setAttributes([i,'',FP_not_in_IM[i - dif - len(Images_not_in_FP) - len(FP_not_in_IM)], Comparison2[i - dif]])
-                                            except (RuntimeError, TypeError, NameError, ValueError):
-                                                QMessageBox.information(None, "General Error","PPC Format errors found, exiting!")
-                                        elif len(ImageID) > len(ImageIDext):
-                                            try:
-                                                newfeat.setAttributes([i, Images_not_in_FP[i - dif - len(Images_not_in_FP) - len(FP_not_in_IM)],'', Comparison2[i - dif]])
-                                            except (RuntimeError, TypeError, NameError, ValueError):
-                                                QMessageBox.information(None, "General Error","PPC Format errors found, exiting!")
-                                    pr.addFeatures([newfeat])
+                    # create virtual layer
+                    vl = QgsVectorLayer("Point", "Image-check: " + str(ntpath.basename(ImageDirPath)), "memory")
+                    pr = vl.dataProvider()
+                    QMessageBox.information(self.iface.mainWindow(), 'PPC check',  ImageDirPath)
+                    ImageNames = self.readdata(ImageDirPath)
+                    QMessageBox.information(self.iface.mainWindow(), 'PPC check',  "test2")
+                    for i in ImageNames:
+                        ImageID2.append(os.path.basename(os.path.normpath(i)))
 
 
-                        vl.updateExtents()
-                        vl.updateFields()
-                        QgsMapLayerRegistry.instance().addMapLayer(vl)
-
-                        rapportenI = "Check of: \n" + imdirpth + "\n \nThere was found: \n" + str(len(Images_not_in_FP))+" Images without associated Footprint \n" +  str(len(FP_not_in_IM)) + " Footprints without associated Image \n"
-                        if ImDFail+ImFFail+SizeFailCount+CompFailCount == 0:
-                            QMessageBox.information(self.iface.mainWindow(),'PPC check',rapportenI)
+                    imdirpth = ntpath.basename(ImageDirPath)
+                    Comparison1 = []
+                    Comparison2 = []
+                    FP_in_IM = []
+                    FP_not_in_IM = []
+                    Images_in_FP = []
+                    Images_not_in_FP = []
+                    nlist = []
+                    ImDFail = 0
+                    ImFFail = 0
+                    SizeFailCount = 0
+                    CompFailCount = 0
+                    for i in ImageID1:
+                        if i in ImageID2:
+                            FP_in_IM.append(i)
+                            Comparison1.append("OK - Footprint has associated Image")
                         else:
-                            QMessageBox.critical(self.iface.mainWindow(),'PPC check',rapportenI)
-                        self.dlg.close()
-                        return
+                            FP_not_in_IM.append(i)
+                            Comparison2.append("Fail - Footprint does not have associated Image")
+                    for i in ImageID2:
+                        if i in ImageID1:
+                            Images_in_FP.append(i)
+                            Comparison1.append("OK - Image has associated footprint")
+                        else:
+                            Images_not_in_FP.append(i)
+                            Comparison2.append("Fail - Image does not have associated footprint")
+
+                    # add fields
+                    pr.addAttributes([QgsField("ID", QVariant.String),
+                                      QgsField("ImageID", QVariant.String),
+                                      QgsField("FootprintID", QVariant.String),
+                                      QgsField("Comparison1", QVariant.String),
+                                      QgsField("Comparison2", QVariant.String)])
+                    if len(ImageID2) < len(ImageID1):
+                        rng = len(ImageID1)
+                        dif = len(Images_in_FP)
+                    elif len(ImageID2) > len(ImageID1):
+                        rng = len(ImageID2)
+                        dif = len(FP_in_IM)
+                    ImageID1.sort()
+
+
+                    for i in range(0, rng):
+                        # add a feature
+                        newfeat = QgsFeature()
+                        if i < dif:
+                            try:
+                                newfeat.setAttributes([i, FP_in_IM[i], Images_in_FP[i], Comparison1[i], Comparison1[i + dif]])
+                            except (RuntimeError, TypeError, NameError, ValueError):
+                                QMessageBox.information(None, "General Error", "PPC Format errors found, exiting1!")
+                        elif dif <= i < (dif + len(Images_not_in_FP)):
+                            if len(ImageID2) < len(ImageID1):
+                                try:
+                                    newfeat.setAttributes([i, Images_not_in_FP[i - dif], '', '', Comparison2[len(ImageID1) - dif]])
+                                except (RuntimeError, TypeError, NameError, ValueError):
+                                    QMessageBox.information(None, "General Error", "PPC Format errors found, exiting2!")
+                            elif len(ImageID2) > len(ImageID1):
+                                try:
+                                    newfeat.setAttributes([i, ImageID2[i], '', '', Comparison2[len(FP_not_in_IM) - 1 + i]])
+                                except (RuntimeError, TypeError, NameError, ValueError):
+                                    QMessageBox.information(None, "General Error", "PPC Format errors found, exiting3!")
+                        else:
+                            if len(ImageID2) < len(ImageID1):
+                                try:
+                                    newfeat.setAttributes([i, '', FP_not_in_IM[i - dif], Comparison2[i - dif], ''])
+                                except (RuntimeError, TypeError, NameError, ValueError):
+                                    QMessageBox.information(None, "General Error", "PPC Format errors found, exiting4!")
+                            elif len(ImageID2) > len(ImageID1):
+                                try:
+                                    newfeat.setAttributes([i, '', '', '', ''])
+                                except (RuntimeError, TypeError, NameError, ValueError):
+                                    QMessageBox.information(None, "General Error", "PPC Format errors found, exiting5!")
+                        pr.addFeatures([newfeat])
+
+                    vl.updateExtents()
+                    vl.updateFields()
+
+                    rapportenI = "Check of: \n" + imdirpth + "\n \nThere was found: \n" + str(len(Images_not_in_FP))+" Images without associated Footprint \n" +  str(len(FP_not_in_IM)) + " Footprints without associated Image \n"
+                    if ImDFail+ImFFail+SizeFailCount+CompFailCount == 0:
+                        QMessageBox.information(self.iface.mainWindow(),'PPC check',rapportenI)
+                    else:
+                        QMessageBox.critical(self.iface.mainWindow(),'PPC check',rapportenI)
+                    self.dlg.close()
+                    return
                 except (RuntimeError, TypeError, NameError): #, ValueError):
                     QMessageBox.information(None, "General Error", "General file error DB-tab, please check that you have choosen the correct file")
                     return
