@@ -87,6 +87,10 @@ class PPC_check:
         self.dlg.pushButton_InputPPC.clicked.connect(self.showFileSelectDialogInputPPC)
         self.dlg.pushButton_InputDB.clicked.connect(self.showFileSelectDialogInputDB)
         self.dlg.pushButton_uploadDB.clicked.connect(self.showFileSelectDialogUploadDB)
+        self.dlg.radioButtonPPC_ob.toggled.connect(self.radio1_ob_clicked)
+        self.dlg.radioButtonPPC_Nadir.toggled.connect(self.radio1_Nadir_clicked)
+        self.dlg.radioButtonDBQC_ob.toggled.connect(self.radio4_ob_clicked)
+        self.dlg.radioButtonDBQC_Nadir.toggled.connect(self.radio4_Nadir_clicked)
         QObject.connect(self.dlg.inShapeAPPC, SIGNAL("currentIndexChanged(QString)" ), self.checkA )
         QObject.connect(self.dlg.inShapeDB, SIGNAL("currentIndexChanged(QString)" ), self.checkA )
         QObject.connect(self.dlg.inShapeAImage, SIGNAL("currentIndexChanged(QString)" ), self.checkA )
@@ -185,6 +189,28 @@ class PPC_check:
     def showFileSelectDialogInputDB(self):
        fname = QFileDialog.getExistingDirectory( None, 'Open image directory', os.path.dirname(__file__))
        self.dlg.lineEditDBImageDir.setText(fname)
+
+    def radio1_ob_clicked(self, enabled):
+        if enabled:
+            self.dlg.lineEditGSD.setText('0.10')
+            self.dlg.lineEditSUN.setText('15')
+            self.dlg.checkBoxVoids.setChecked(True)
+    def radio1_Nadir_clicked(self,enabled):
+        if enabled:
+            self.dlg.lineEditGSD.setText('0.15')
+            self.dlg.lineEditSUN.setText('25')
+            self.dlg.checkBoxVoids.setChecked(False)
+
+    def radio4_ob_clicked(self, enabled):
+        obtemp=['footprints2017']
+        if enabled:
+            self.dlg.inShapeAImage.clear()
+            self.dlg.inShapeAImage.addItems(obtemp)
+    def radio4_Nadir_clicked(self,enabled):
+        nadirtemp = ['ppc2017']
+        if enabled:
+            self.dlg.inShapeAImage.clear()
+            self.dlg.inShapeAImage.addItems(nadirtemp)
 
     def showFileSelectDialogUploadDB(self):
         inputFilNavn = self.dlg.inShapeDB.currentText()
@@ -1196,7 +1222,7 @@ class PPC_check:
                                 newfeat = QgsFeature()
                                 newfeat.setGeometry(QgsGeometry.fromPoint(Geometri))
                                 try:
-                                    newfeat.setAttributes([ImageID, GSDpass, solVinkelen, SUNpass,"",TILTpass,REFpass,NameFormat,Orientation])
+                                    newfeat.setAttributes([ImageID, GSDpass, solVinkelen, SUNpass,"",TILTpass,REFpass,NameFormat,Orientation+" : "+kappa])
                                 except (RuntimeError, TypeError, NameError, ValueError):
                                     QMessageBox.information(None, "General Error", "PPC Format errors found, exiting!")
                                     return
@@ -1263,7 +1289,6 @@ class PPC_check:
             if str(currentIndex) == "3":
                 import subprocess
                 inputLayer = unicode(self.dlg.inShapeAImage.currentText())
-
                 ImageDirPath = str(self.dlg.lineEditDBImageDir.text())
                 ImageDirPath = ImageDirPath.replace("\\", "/")
                 inputFilNavn = self.dlg.inShapeAImage.currentText()
@@ -1276,15 +1301,17 @@ class PPC_check:
                 # Herunder opsttes tabellen der skal bruges. Findes tabellen ikke allerede opretts den
                 DB_schema = "public"
                 DB_geom = "geom"
-                DB_table = 'footprints2017_test'
-                # DB_table = 'oblique_2017_check_table'
+                if self.dlg.radioButtonDBQC_ob.isChecked():
+                    DB_table = 'footprints2017'
+                elif self.dlg.radioButtonDBQC_Nadir.isChecked():
+                    DB_table = 'ppc2017'
 
                 conn = psycopg2.connect("dbname=" + DB_name + " user=" + DB_user + " host=" + DB_host + " password=" + DB_pass)
                 cur = conn.cursor()
 
                 cur.execute("select exists(select * from information_schema.tables where table_name=%s)", (DB_table,))
                 if cur.fetchone()[0]:
-                    QMessageBox.information(None, "General Info", 'Database found')
+                    QMessageBox.information(None, "General Info", 'Database: '+DB_table+' found \n Checking...')
                 else:
                     QMessageBox.information(None, "General Info", 'Database: '+DB_table+' not found ')
 
@@ -1296,11 +1323,8 @@ class PPC_check:
                 Omega = []
                 Phi = []
                 Kappa = []
-                Direction = []
                 TimeUTC = []
                 CameraID = []
-                coneid = []
-                EstAcc = []
                 Height_Eli = []
                 TimeCET = []
                 ReferenceS = []
@@ -1312,42 +1336,77 @@ class PPC_check:
                 GSD = []
                 ImageNames=[]
                 ImageID2 = []
-                cur.execute('SELECT * from ' + DB_table)
-                rows = cur.fetchall()
-                for row in rows:
-                    ImageID.append(row[0])
-                    East.append(row[1])
-                    North.append(row[2])
-                    Height.append(row[3])
-                    Omega.append(row[4])
-                    Phi.append(row[5])
-                    Kappa.append(row[6])
-                    Direction.append(row[7])
-                    TimeUTC.append(row[8])
-                    CameraID.append(row[9])
-                    coneid.append(row[10])
-                    EstAcc.append(row[11])
-                    Height_Eli.append(row[12])
-                    TimeCET.append(row[13])
-                    ReferenceS.append(row[14])
-                    Producer.append(row[15])
-                    Level.append(row[16])
-                    Comment_co.append(row[17])
-                    Comment_sdfe.append(row[18])
-                    Status.append(row[19])
-                    GSD.append(row[20])
+
+                if self.dlg.radioButtonDBQC_ob.isChecked():
+                    Direction = []
+                    EstAcc = []
+                    coneid = []
+
+                    cur.execute('SELECT * from ' + DB_table)
+                    rows = cur.fetchall()
+                    for row in rows:
+                        ImageID.append(row[0])
+                        East.append(row[1])
+                        North.append(row[2])
+                        Height.append(row[3])
+                        Omega.append(row[4])
+                        Phi.append(row[5])
+                        Kappa.append(row[6])
+                        Direction.append(row[7])
+                        TimeUTC.append(row[8])
+                        CameraID.append(row[9])
+                        coneid.append(row[10])
+                        EstAcc.append(row[11])
+                        Height_Eli.append(row[12])
+                        TimeCET.append(row[13])
+                        ReferenceS.append(row[14])
+                        Producer.append(row[15])
+                        Level.append(row[16])
+                        Comment_co.append(row[17])
+                        Comment_sdfe.append(row[18])
+                        Status.append(row[19])
+                        GSD.append(row[20])
+                elif self.dlg.radioButtonDBQC_Nadir.isChecked():
+                    cur.execute('SELECT * from ' + DB_table)
+                    ogc_id=[]
+                    rows = cur.fetchall()
+                    for row in rows:
+                        ogc_id.append(row[0])
+                        ImageID.append(row[1])
+                        East.append(row[2])
+                        North.append(row[3])
+                        Height.append(row[4])
+                        Omega.append(row[5])
+                        Phi.append(row[6])
+                        Kappa.append(row[7])
+                        TimeUTC.append(row[8])
+                        CameraID.append(row[9])
+                        Height_Eli.append(row[10])
+                        TimeCET.append(row[11])
+                        ReferenceS.append(row[12])
+                        Producer.append(row[13])
+                        Level.append(row[14])
+                        Comment_co.append(row[15])
+                        Comment_sdfe.append(row[16])
+                        Status.append(row[17])
+                        GSD.append(row[18])
+
+                QMessageBox.information(None, "General Info", str(ImageID[0]))
 
                 for i in ImageID:
                     ImageID1.append(i + ".tif")
 
 
                 try:
+                    ImageDirPath = str(self.dlg.lineEditDBImageDir.text())
+                    ImageDirPath = ImageDirPath.replace("\\", "/")
                     # create virtual layer
                     vl = QgsVectorLayer("Point", "Image-check: " + str(ntpath.basename(ImageDirPath)), "memory")
                     pr = vl.dataProvider()
-                    QMessageBox.information(self.iface.mainWindow(), 'PPC check',  ImageDirPath)
-                    ImageNames = self.readdata(ImageDirPath)
-                    QMessageBox.information(self.iface.mainWindow(), 'PPC check',  "test2")
+                    if self.dlg.radioButtonDBQC_ob.isChecked():
+                        ImageNames = self.readdata(ImageDirPath)
+                    elif self.dlg.radioButtonDBQC_Nadir.isChecked():
+                        ImageNames = os.listdir(ImageDirPath)
                     for i in ImageNames:
                         ImageID2.append(os.path.basename(os.path.normpath(i)))
 
@@ -1391,8 +1450,10 @@ class PPC_check:
                     elif len(ImageID2) > len(ImageID1):
                         rng = len(ImageID2)
                         dif = len(FP_in_IM)
-                    ImageID1.sort()
-
+                    FP_in_IM.sort()
+                    Images_in_FP.sort()
+                    FP_not_in_IM.sort()
+                    Images_not_in_FP.sort()
 
                     for i in range(0, rng):
                         # add a feature
@@ -1428,8 +1489,11 @@ class PPC_check:
 
                     vl.updateExtents()
                     vl.updateFields()
+                    QgsMapLayerRegistry.instance().addMapLayer(vl)
 
-                    rapportenI = "Check of: \n" + imdirpth + "\n \nThere was found: \n" + str(len(Images_not_in_FP))+" Images without associated Footprint \n" +  str(len(FP_not_in_IM)) + " Footprints without associated Image \n"
+                    rapportenI = "Check of: \n" + imdirpth + "\n \nThere was found: \n" + str(len(Images_not_in_FP))+" Images without associated Footprint \n"
+                    rapportenI = rapportenI + str(len(FP_not_in_IM)) + " Footprints without associated Image \n \n Images:\n"+ str(len(Images_in_FP))+" of "+str(len(ImageID2))+" - OK\n"
+                    rapportenI = rapportenI + str(len(Images_not_in_FP))+ " of "+ str(len(ImageID2))+" - Fail"
                     if ImDFail+ImFFail+SizeFailCount+CompFailCount == 0:
                         QMessageBox.information(self.iface.mainWindow(),'PPC check',rapportenI)
                     else:
