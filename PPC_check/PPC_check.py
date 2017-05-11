@@ -643,7 +643,8 @@ class PPC_check:
         result5 = []
 
         fname = filedir
-        tt = os.listdir(fname + "/001/0001")
+        tt1 = os.listdir(fname + "/001/")
+        tt = os.listdir(fname+"/001/"+tt1[0])
         if tt[0].endswith('.jpg'):
             var = '.jpg'
         elif tt[0].endswith('.tif'):
@@ -1025,18 +1026,18 @@ class PPC_check:
                                             if patternKappa.match(kappa):
                                                 FeatOrientationFail = FeatOrientationFail+1
                                                 kappacount = kappacount + 1
-                                                NameFormat4 = '  Kappa-Value length  '
+                                                NameFormat4 = '  Kappa - suspicious length:  '
                                             else:
-                                                NameFormat4 = ''
+                                                NameFormat4 = 'Kappa '
                                                 kappacount = 0
                                         else:
                                             kappa = "%.4f" % float(kappa)
                                             if patternKappa.match(kappa):
                                                 FeatOrientationFail = FeatOrientationFail+1
                                                 kappacount = kappacount +1
-                                                NameFormat4 = '  Kappa-maybe truncated  '
+                                                NameFormat4 = '  Kappa - maybe truncated:  '
                                             else:
-                                                NameFormat4 = ' '
+                                                NameFormat4 = 'Kappa '
                                                 kappacount = 0
 
 
@@ -1292,6 +1293,16 @@ class PPC_check:
                 ImageDirPath = str(self.dlg.lineEditDBImageDir.text())
                 ImageDirPath = ImageDirPath.replace("\\", "/")
                 inputFilNavn = self.dlg.inShapeAImage.currentText()
+                ImageNames=[]
+                ImageID2 = []
+
+                if self.dlg.radioButtonDBQC_ob.isChecked():
+                    ImageNames = self.readdata(ImageDirPath)
+                elif self.dlg.radioButtonDBQC_Nadir.isChecked():
+                    ImageNames = os.listdir(ImageDirPath)
+                for i in ImageNames:
+                    ImageID2.append(os.path.basename(os.path.normpath(i)))
+                blok = ImageID2[0][5:10]
 
                 DB_name = "geodanmark"
                 DB_host = "c1200038"
@@ -1311,7 +1322,7 @@ class PPC_check:
 
                 cur.execute("select exists(select * from information_schema.tables where table_name=%s)", (DB_table,))
                 if cur.fetchone()[0]:
-                    QMessageBox.information(None, "General Info", 'Database: '+DB_table+' found \n Checking...')
+                    QMessageBox.information(None, "General Info", 'Database: '+DB_table+' found \n Checking... \n\n This may take a while...')
                 else:
                     QMessageBox.information(None, "General Info", 'Database: '+DB_table+' not found ')
 
@@ -1334,15 +1345,13 @@ class PPC_check:
                 Comment_sdfe = []
                 Status = []
                 GSD = []
-                ImageNames=[]
-                ImageID2 = []
 
                 if self.dlg.radioButtonDBQC_ob.isChecked():
                     Direction = []
                     EstAcc = []
                     coneid = []
 
-                    cur.execute('SELECT * from ' + DB_table)
+                    cur.execute('SELECT * from ' + DB_table + ' WHERE imageid LIKE ' + '\'%' + blok + '%\'')
                     rows = cur.fetchall()
                     for row in rows:
                         ImageID.append(row[0])
@@ -1367,7 +1376,7 @@ class PPC_check:
                         Status.append(row[19])
                         GSD.append(row[20])
                 elif self.dlg.radioButtonDBQC_Nadir.isChecked():
-                    cur.execute('SELECT * from ' + DB_table)
+                    cur.execute('SELECT * from ' + DB_table + ' WHERE imageid LIKE ' + '\'%' + blok + '%\'')
                     ogc_id=[]
                     rows = cur.fetchall()
                     for row in rows:
@@ -1391,7 +1400,7 @@ class PPC_check:
                         Status.append(row[17])
                         GSD.append(row[18])
 
-                QMessageBox.information(None, "General Info", str(ImageID[0]))
+                #QMessageBox.information(None, "General Info", str(ImageID[0]))
 
                 for i in ImageID:
                     ImageID1.append(i + ".tif")
@@ -1403,13 +1412,6 @@ class PPC_check:
                     # create virtual layer
                     vl = QgsVectorLayer("Point", "Image-check: " + str(ntpath.basename(ImageDirPath)), "memory")
                     pr = vl.dataProvider()
-                    if self.dlg.radioButtonDBQC_ob.isChecked():
-                        ImageNames = self.readdata(ImageDirPath)
-                    elif self.dlg.radioButtonDBQC_Nadir.isChecked():
-                        ImageNames = os.listdir(ImageDirPath)
-                    for i in ImageNames:
-                        ImageID2.append(os.path.basename(os.path.normpath(i)))
-
 
                     imdirpth = ntpath.basename(ImageDirPath)
                     Comparison1 = []
@@ -1418,7 +1420,6 @@ class PPC_check:
                     FP_not_in_IM = []
                     Images_in_FP = []
                     Images_not_in_FP = []
-                    nlist = []
                     ImDFail = 0
                     ImFFail = 0
                     SizeFailCount = 0
@@ -1438,13 +1439,14 @@ class PPC_check:
                             Images_not_in_FP.append(i)
                             Comparison2.append("Fail - Image does not have associated footprint")
 
+
                     # add fields
                     pr.addAttributes([QgsField("ID", QVariant.String),
                                       QgsField("ImageID", QVariant.String),
                                       QgsField("FootprintID", QVariant.String),
                                       QgsField("Comparison1", QVariant.String),
                                       QgsField("Comparison2", QVariant.String)])
-                    if len(ImageID2) < len(ImageID1):
+                    if len(ImageID2) <= len(ImageID1):
                         rng = len(ImageID1)
                         dif = len(Images_in_FP)
                     elif len(ImageID2) > len(ImageID1):
@@ -1454,7 +1456,6 @@ class PPC_check:
                     Images_in_FP.sort()
                     FP_not_in_IM.sort()
                     Images_not_in_FP.sort()
-
                     for i in range(0, rng):
                         # add a feature
                         newfeat = QgsFeature()
