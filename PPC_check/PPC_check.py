@@ -704,7 +704,11 @@ class PPC_check:
                                 PRINCIPAL_POINT_Y = SplitLine[1].rstrip('\r\n')
                             elif SplitLine[0] == "SENSOR_AREA_WIDTH:":
                                 SENSOR_AREA_WIDTH = SplitLine[1].rstrip('\r\n')
+                            elif SplitLine[0] == "SENSOR_AREA_WIDTH_PIX:":
+                                SENSOR_AREA_WIDTH = SplitLine[1].rstrip('\r\n')
                             elif SplitLine[0] == "SENSOR_AREA_HEIGHT:":
+                                SENSOR_AREA_HEIGHT = SplitLine[1].rstrip('\r\n')
+                            elif SplitLine[0] == "SENSOR_AREA_HEIGHT_PIX:":
                                 SENSOR_AREA_HEIGHT = SplitLine[1].rstrip('\r\n')
                             elif SplitLine[0] == "ROTATION:":
                                 ROTATION = SplitLine[1].rstrip('\r\n')
