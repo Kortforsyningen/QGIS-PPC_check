@@ -1490,8 +1490,6 @@ class PPC_check:
                         Status.append(row[17])
                         GSD.append(row[18])
 
-                #QMessageBox.information(None, "General Info", str(ImageID[0]))
-
                 for i in ImageID:
                     ImageID1.append(i + ".tif")
 
@@ -1502,7 +1500,6 @@ class PPC_check:
                     # create virtual layer
                     vl = QgsVectorLayer("Point", "Image-check: " + str(ntpath.basename(ImageDirPath)), "memory")
                     pr = vl.dataProvider()
-
                     imdirpth = ntpath.basename(ImageDirPath)
                     Comparison1 = []
                     Comparison2 = []
@@ -1514,6 +1511,7 @@ class PPC_check:
                     ImFFail = 0
                     SizeFailCount = 0
                     CompFailCount = 0
+
                     for i in ImageID1:
                         if i in ImageID2:
                             FP_in_IM.append(i)
@@ -1528,7 +1526,6 @@ class PPC_check:
                         else:
                             Images_not_in_FP.append(i)
                             Comparison2.append("Fail - Image does not have associated footprint")
-
 
                     # add fields
                     pr.addAttributes([QgsField("ID", QVariant.String),
@@ -1546,6 +1543,7 @@ class PPC_check:
                     Images_in_FP.sort()
                     FP_not_in_IM.sort()
                     Images_not_in_FP.sort()
+
                     for i in range(0, rng):
                         # add a feature
                         newfeat = QgsFeature()
