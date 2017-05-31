@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'PPC_check_dialog_base.ui'
 #
-# Created: Thu Apr 27 08:59:24 2017
+# Created: Wed May 24 13:19:32 2017
 #      by: PyQt4 UI code generator 4.10.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -136,19 +136,19 @@ class Ui_PPC_checkDialogBase(object):
         self.radioButtonDB_Nadir.setGeometry(QtCore.QRect(170, 70, 201, 17))
         self.radioButtonDB_Nadir.setObjectName(_fromUtf8("radioButtonDB_Nadir"))
         self.pushButton_uploadDB = QtGui.QPushButton(self.tab_DB)
-        self.pushButton_uploadDB.setGeometry(QtCore.QRect(160, 120, 111, 23))
+        self.pushButton_uploadDB.setGeometry(QtCore.QRect(270, 110, 111, 23))
         self.pushButton_uploadDB.setObjectName(_fromUtf8("pushButton_uploadDB"))
+        self.OverwriteDB = QtGui.QCheckBox(self.tab_DB)
+        self.OverwriteDB.setGeometry(QtCore.QRect(40, 110, 181, 17))
+        self.OverwriteDB.setObjectName(_fromUtf8("OverwriteDB"))
         self.tabWidget.addTab(self.tab_DB, _fromUtf8(""))
         self.tab_Disk = QtGui.QWidget()
         self.tab_Disk.setObjectName(_fromUtf8("tab_Disk"))
-        self.groupBox_5 = QtGui.QGroupBox(self.tab_Disk)
-        self.groupBox_5.setGeometry(QtCore.QRect(30, 130, 371, 91))
-        self.groupBox_5.setObjectName(_fromUtf8("groupBox_5"))
         self.groupBox_4 = QtGui.QGroupBox(self.tab_Disk)
-        self.groupBox_4.setGeometry(QtCore.QRect(30, 10, 371, 101))
+        self.groupBox_4.setGeometry(QtCore.QRect(30, 10, 371, 271))
         self.groupBox_4.setObjectName(_fromUtf8("groupBox_4"))
         self.textEdit = QtGui.QTextEdit(self.groupBox_4)
-        self.textEdit.setGeometry(QtCore.QRect(20, 20, 341, 71))
+        self.textEdit.setGeometry(QtCore.QRect(10, 20, 351, 241))
         self.textEdit.setObjectName(_fromUtf8("textEdit"))
         self.tabWidget.addTab(self.tab_Disk, _fromUtf8(""))
         self.tab_DBQC = QtGui.QWidget()
@@ -215,17 +215,30 @@ class Ui_PPC_checkDialogBase(object):
         self.radioButtonDB_ob.setText(_translate("PPC_checkDialogBase", "Oblique ( footprint2017)", None))
         self.radioButtonDB_Nadir.setText(_translate("PPC_checkDialogBase", "Nadir ( ppc2017)", None))
         self.pushButton_uploadDB.setText(_translate("PPC_checkDialogBase", "Upload", None))
+        self.OverwriteDB.setText(_translate("PPC_checkDialogBase", "Overwrite existing DB files", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_DB), _translate("PPC_checkDialogBase", "#2 - Database", None))
-        self.groupBox_5.setTitle(_translate("PPC_checkDialogBase", "To be checked", None))
         self.groupBox_4.setTitle(_translate("PPC_checkDialogBase", "Path to image dir:", None))
         self.textEdit.setHtml(_translate("PPC_checkDialogBase", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
 "</style></head><body style=\" font-family:\'MS Shell Dlg 2\'; font-size:8.25pt; font-weight:400; font-style:normal;\">\n"
-"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:8pt;\">Only for SDFE! </span></p>\n"
-"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:8pt;\">Kør disk kontrol fra arbejds PC.</span></p>\n"
+"<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:8pt;\">####  Only for SDFE!  ####</span></p>\n"
+"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:8pt;\">     </span></p>\n"
+"<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:8pt;\">###INFO###</span></p>\n"
+"<p align=\"center\" style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:8pt;\"><br /></p>\n"
+"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:8pt;\">1. Brug notepad++ til at åbne filen &quot;CheckImages.bat&quot; som ligger i \'C:/temp/imageQC/\' på arbejds PC\'erne</span></p>\n"
 "<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:8pt;\"><br /></p>\n"
-"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:8pt;\">###INFO###</span></p></body></html>", None))
+"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:8pt;\">2. Rediger filen, så den passet til den aktuelle disc:</span></p>\n"
+"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:7pt;\">################################################</span></p>\n"
+"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:7pt;\">##   python RunAllFilesInDir.py -i </span><span style=\" font-size:7pt; font-weight:600;\">J:\\Block_81_07\\Image_JPEG\\</span><span style=\" font-size:7pt;\"> -s 1  ##</span></p>\n"
+"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:7pt;\">##           |       |       |      |       |       |               ##</span></p>\n"
+"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:7pt;\">##           v      v       v     v      v       v           ##</span></p>\n"
+"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:7pt;\">##  python RunAllFilesInDir.py -i </span><span style=\" font-size:7pt; font-weight:600;\">H:\\Block_83_30\\Image_TIFF\\</span><span style=\" font-size:7pt;\"> -s 1  ##</span></p>\n"
+"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:7pt;\">################################################</span></p>\n"
+"<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:7pt;\"><br /></p>\n"
+"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:8pt;\">3. Kør til slut bat-filen fra en Osgeo4w shell.</span></p>\n"
+"<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:8pt;\"><br /></p>\n"
+"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:8pt;\">4. Når scriptet er færdig er #3 slut!</span></p></body></html>", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_Disk), _translate("PPC_checkDialogBase", "#3 - Disk", None))
         self.labelImageDir_2.setText(_translate("PPC_checkDialogBase", "Image Dir Path:", None))
         self.pushButton_InputDB.setText(_translate("PPC_checkDialogBase", "...", None))
