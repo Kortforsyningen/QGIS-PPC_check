@@ -1057,7 +1057,7 @@ class PPC_check:
                                 Orientation = ''
                                 if (self.dlg.checkBoxFormat.isChecked()):
                                     try:
-                                        patternImageIDGeoDK = re.compile("[0-9]{4}_[0-9]{2}_[0-9]{2}_\d+_[0-9]{4}")
+                                        patternImageIDGeoDK = re.compile("\w{0,1}[0-9]{4}_[0-9]{2}_[0-9]{2}_\d+_[0-9]{4}")
                                         patternImageIDoblique = re.compile("[0-9]{4}_[0-9]{2}_[0-9]{2}_\d+_[0-9]{4}_[0-9]{8}")
                                         patternTime = re.compile("[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}.{0,1}[0-9]{0,3}")
                                         patternKappa = re.compile("-?[\d]+.[0-9]{3}[0]")
