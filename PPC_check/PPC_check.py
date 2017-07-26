@@ -37,9 +37,9 @@ from processing.tools import *
 from osgeo import gdal, osr
 import re, os
 # Initialize Qt resources from file resources.py
-import resources
+import resources, DBConnect
 # Import the code for the dialog
-from PPC_check_dialog import PPC_checkDialog
+from PPC_check_dialog import PPC_checkDialog, PPC_checkDialogII
 import os.path
 
 class PPC_check:
@@ -75,10 +75,10 @@ class PPC_check:
         self.toolbar.setObjectName(u'PPC_check')
         #self.dlg.pushButton_Input.clicked.connect(self.showFileSelectDialogInput)
 
-        self.ProjectLog,self.MainLog,self.PPC_GSD,self.Sun,self.Tilt,self.CamCal,self.ImageDir,self.DBImageDir = self.readSettings
+        self.ProjectLog,self.MainLog,self.PPC_GSD,self.Sun,self.Tilt,self.CamCal,self.ImageDir,self.DBImageDir,self.DBname,self.DBhost,self.DBport,self.DBuser,self.DBpass = self.readSettings
 
-        if self.CamCal == "-":
-            self.dlg.lineEditCamDir.setText(os.path.dirname(__file__)+"\\CameraCalibrations\\")
+        #if self.CamCal == "-":
+            #self.dlg.lineEditCamDir.setText(os.path.dirname(__file__)+"\\CameraCalibrations\\")
         #if self.ImageDir == "-":
         #    self.dlg.lineEditImageDir.setText("C:\Users\B020736\Documents\Test_Oblique_2017\Image_TIF")
         #if self.DBImageDir == "-":
@@ -105,13 +105,26 @@ class PPC_check:
         self.dlg.checkBoxTilt.setChecked(True)
         self.dlg.lineEditTilt.setText(self.Tilt)
         self.dlg.checkBoxRef.setChecked(True)
-        self.dlg.checkBoxComp.setChecked(True)
         self.dlg.lineEditRef.setText('ETRS89,UTM32N,DVR90')
         self.dlg.checkBoxVoids.setChecked(True)
         self.dlg.radioButtonPPC_Nadir.setChecked(True)
         self.dlg.radioButtonDB_Nadir.setChecked(True)
         self.dlg.radioButtonDBQC_Nadir.setChecked(True)
-        self.dlg.lineEditDBImageDir.setText('C:/Users/B020736/Documents/Test_Oblique_2017/Image_TIF')
+        self.dlg.db_name.setText(self.DBname)
+        self.dlg.db_host.setText(self.DBhost)
+        self.dlg.db_port.setText(self.DBport)
+        self.dlg.db_user.setText(self.DBuser)
+        self.dlg.db_password.setText(self.DBpass)
+        self.dlg.db_name_2.setText(self.DBname)
+        self.dlg.db_host_2.setText(self.DBhost)
+        self.dlg.db_port_2.setText(self.DBport)
+        self.dlg.db_user_2.setText(self.DBuser)
+        self.dlg.db_password_2.setText(self.DBpass)
+
+        self.pgr = PPC_checkDialogII()
+        # add funcionallity to pushbutton
+        #self.dlg.pushButton_run.clicked.connect(self.progress)
+
 
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
@@ -216,6 +229,7 @@ class PPC_check:
         inputFilNavn = self.dlg.inShapeDB.currentText()
         canvas = self.iface.mapCanvas()
         allLayers = canvas.layers()
+
         for i in allLayers:
             # QMessageBox.information(None, "status",i.name())
             if (i.name() == inputFilNavn):
@@ -226,9 +240,7 @@ class PPC_check:
                 pr = vl.dataProvider()
                 # vl.startEditing()
                 # add fields
-                pr.addAttributes([QgsField("ImageID", QVariant.String)])
-                                  #QgsField("Upload", QVariant.String),
-                                  #QgsField("Reason", QVariant.String)])
+                pr.addAttributes([QgsField("ImageID", QVariant.String),QgsField("Upload", QVariant.String)]) #,QgsField("Reason", QVariant.String)])
 
                 if self.dlg.useSelectedDB.isChecked():
                     selection = layer.selectedFeatures()
@@ -238,170 +250,152 @@ class PPC_check:
                     QMessageBox.information(None, "status", "uploading all features")
 
                 if self.dlg.radioButtonDB_ob.isChecked():
-                    # Herunder skabes link til database
-                    DB_name = "geodanmark"
-                    DB_host = "c1200038"
-                    DB_port = "5432"
-                    DB_user = "postgres"
-                    DB_pass = "postgres"
-                    # Herunder opsttes tabellen der skal bruges. Findes tabellen ikke allerede opretts den
-                    DB_schema = "public"
-                    DB_geom = "geom"
-                    DB_table = 'footprints2017'
-                    #DB_table = 'oblique_2017_check_table'
+                    try:
+                        # Herunder skabes link til database
+                        DB_name = self.dlg.db_name.text()
+                        DB_host = self.dlg.db_host.text()
+                        DB_port = self.dlg.db_port.text()
+                        DB_user = self.dlg.db_user.text()
+                        DB_pass = self.dlg.db_password.text()
+                        # Herunder opsttes tabellen der skal bruges. Findes tabellen ikke allerede opretts den
+                        DB_schema = "public"
+                        DB_geom = "geom"
+                        DB_table = 'footprints2017'
 
-                    conn = psycopg2.connect("dbname=" + DB_name + " user=" + DB_user + " host=" + DB_host + " password=" + DB_pass)
-                    cur = conn.cursor()
+                        # DB_table = 'oblique_2017_check_table'
+                        conn = psycopg2.connect("dbname=" + DB_name + " user=" + DB_user + " host=" + DB_host + " password=" + DB_pass)
+                        cur = conn.cursor()
 
-                    cur.execute("select exists(select * from information_schema.tables where table_name=%s)", (DB_table,))
-                    if cur.fetchone()[0]:
-                        QMessageBox.information(None, "General Info",'Database found - uploading')
-                    else:
-                        QMessageBox.information(None, "General Info", 'Creating database ' + DB_table)
-                        cur.execute("CREATE TABLE " + DB_schema + "." + DB_table + "(imageid TEXT PRIMARY KEY, easting float, northing float, height real,omega real, phi real, kappa real, direction text, timeutc text, cameraid text, "
-                                                                                   "coneid real, estacc real, height_eli text, timecet text, \"references\" text, producer text, level real, comment_co text, comment_gs text, status text, gsd text, geom geometry)")
-                        conn.commit()
+                        cur.execute("select exists(select * from information_schema.tables where table_name=%s)",(DB_table,))
+                        if cur.fetchone()[0]:
+                            QMessageBox.information(None, "General Info", 'Database found - uploading')
+                        else:
+                            QMessageBox.information(None, "General Info", 'Creating database ' + DB_table)
+                            cur.execute(
+                                "CREATE TABLE " + DB_schema + "." + DB_table + "(imageid TEXT PRIMARY KEY, easting float, northing float, height real,omega real, phi real, kappa real, direction text, timeutc text, cameraid text, "
+                                                                               "coneid real, estacc real, height_eli text, timecet text, \"references\" text, producer text, level real, comment_co text, comment_gs text, status text, gsd text, geom geometry)")
+                            conn.commit()
 
-                    IDs = []
-                    #cur.execute('SELECT * from '+DB_table)
-                    #rows = cur.fetchall()
-                    #for row in rows:
-                    #    ii = row[0]
-                    #    IDs.append(ii)
-                    list = []
-                    coneid=[]
-                    finallist = []
-                    ImageID = []
-                    East = []
-                    North = []
-                    Height = []
-                    Omega = []
-                    Phi = []
-                    Kappa = []
-                    Direction = []
-                    TimeUTC = []
-                    CameraID = []
-                    EstAcc = []
-                    Height_Eli = []
-                    TimeCET = []
-                    ReferenceS = []
-                    Producer = []
-                    Level = []
-                    Comment_co = []
-                    Comment_sdfe = []
-                    Status = []
-                    GSD = []
-                    IMupload=[]
-                    IMreason=[]
-                    DBY=0
-                    DBN=0
-                    DBOY=0
-                    DBON=0
-                    for feat in selection:
-                        #attrs = ft.attributes()
-                        ImageID.append(feat['ImageID'])
-                        East.append(feat['Easting'])
-                        North.append(feat['Northing'])
-                        Height.append(feat['Height'])
-                        Omega.append(feat['Omega'])
-                        Phi.append(feat['Phi'])
-                        Kappa.append(feat['Kappa'])
-                        Direction.append(feat['Direction'])
-                        TimeUTC.append(feat['TimeUTC'])
-                        CameraID.append(feat['CameraID'])
-                        EstAcc.append(feat['EstAcc'])
-                        Height_Eli.append(feat['Height_Eli'])
-                        TimeCET.append(feat['TimeCET'])
-                        ReferenceS.append(feat['ReferenceS'])
-                        Producer.append(feat['Producer'])
-                        Level.append(feat['Level'])
-                        Comment_co.append(feat['Comment_Co'])
-                        Comment_sdfe.append(feat['Comment_GS'])
-                        Status.append(feat['Status'])
-                        GSD.append(feat['GSD'])
-                        coneid.append(feat['ConeID'])
-                        geom = feat.geometry()
-                        Geometri = geom.asPolygon()
-                        list.append(Geometri)
+                        listofattrs = ['ImageID', 'Easting', 'Northing', 'Height', 'Omega', 'Phi', 'Kappa', 'TimeUTC',
+                                       'CameraID', 'Height_Eli', 'TimeCET', 'ReferenceS', 'Producer', 'Level', 'Comment_co',
+                                       'Comment_GS', 'Status', 'GSD']
+                        obj = {}
+                        for n in listofattrs:
+                            obj[n] = []
 
-                    for ll in list:
-                        test = str(ll[0])
-                        test1 = test.replace("[", "")
-                        test2 = test1.replace("]", "")
-                        test3 = test2.replace(",", " ")
-                        test4 = test3.replace(")  (", "), (")
-                        test5 = test4.replace("(", "")
-                        test6 = test5.replace(")", "")
-                        finallist.append(test6)
+                        list = []
+                        for feat in selection:
+                            for i in obj.keys():
+                                obj[i].append(feat[i])
+                            geom = feat.geometry()
+                            Geometri = geom.asPolygon()
+                            list.append(Geometri)
+
+                        finallist = []
+                        for ll in list:
+                            finallist.append(str(ll).replace("[", "").replace("]", "").replace(",", " ").replace(")  (", "), (").replace("(", "").replace(")", ""))
+
+                    except Exception, e:
+                        QMessageBox.information(None, "General Info", 'ERROR:', e[0])
+
 
                     if self.dlg.OverwriteDB.isChecked():
-                        try:
-                            cur = conn.cursor()
-                            try:
-                                for i in range(0, (len(ImageID))):
-                                    #if ImageID[i] in IDs:
-                                    strengen = ("""update """ + DB_table + """ set imageid = '""" + str(ImageID[i]) + """',easting = '""" + str(East[i]) + """', northing = '""" + str(North[i]) + """',
-                                                        height = '""" + str(Height[i]) + """', omega = '""" + str(Omega[i]) + """', phi = '""" + str(Phi[i]) + """', kappa = '""" + str(Kappa[i]) + """',
-                                                        direction = '"""+str(Direction[i])+"""', timeutc = '""" + str(TimeUTC[i]) + """', cameraid = '""" + str(CameraID[i]) + """', coneid = '"""+str(coneid[i])+"""',
-                                                        estacc = '"""+str(EstAcc[i])+"""', height_eli = '""" + str(Height_Eli[i]) + """', timecet = '""" + str(TimeCET[i]) + """', 
-                                                        \"references\" = '""" + str(ReferenceS[i]) + """', producer = '""" + str(Producer[i]) + """', level = '""" + str(Level[i]) + """', comment_gs = '""" + str(Comment_sdfe[i]) + """', 
-                                                        comment_co = '""" + str(Comment_co[i]) + """', status = 'test""" + str(Status[i]) + """', gsd = '""" + str(GSD[i]) + """' where imageid =""" + """'""" + str(ImageID[i]) + """'""")
-                                    cur.execute(strengen)
-                                    #IMupload.append('updated')
-                                    #IMreason.append('replaced existing')
-                                    #DBOY += 1
-                                    #else:
-                                        #IMupload.append('not updated')
-                                        #IMreason.append('not in DB')
-                                        #DBON += 1
-                            except psycopg2.IntegrityError:
-                                conn.rollback()
-                                #print 'commit error - rolling back'
-                            else:
-                                conn.commit()
-
-                        except Exception, e:
-                            QMessageBox.information(None, "General Info", 'ERROR:', e[0])
+                        overwritedata=1
+                        QMessageBox.information(None, "General Info", 'Overwriting existing data')
                     else:
-                        try:
-                            cur = conn.cursor()
+                        QMessageBox.information(None, "General Info", 'Not overwriting existing data, only adding')
+                        overwritedata=2
+
+                    notupdatedcount = 0
+                    updatedcount = 0
+                    insertcount = 0
+                    Imupload=[]
+                    try:
+                        n=0
+                        #add progress bar
+                        self.pgr.label.setText("Uploading...")
+                        self.pgr.show()
+                        self.completed = 0
+                        cur=conn.cursor()
+                        for i in range(0, (len(obj['ImageID']))):
+                            n+=1
+                            print n
                             try:
-                                for i in range(0, (len(ImageID))):
-                                    #if ImageID[i] not in IDs:
-                                    cur.execute("""INSERT INTO """+DB_table+"""  ("imageid","easting","northing","height","omega","phi","kappa","direction","timeutc","cameraid","coneid","estacc",
-                                    "height_eli","timecet",\"references\","producer","level","comment_co","comment_gs","status","gsd","geom") VALUES(%(str1)s,%(float1)s,%(float2)s,%(real3)s,%(str2)s,
-                                    %(str3)s,%(str4)s,%(str5)s,%(str6)s,%(str7)s,%(real16)s,%(real4)s,%(real5)s,%(str8)s,%(str9)s,%(str10)s,%(str11)s,%(str12)s,%(str13)s,%(str14)s,%(str15)s,ST_GeomFromText(%(str16)s,25832))""",
-                                                {'str1': ImageID[i], 'float1': East[i], 'float2': North[i], 'real3': Height[i],
-                                                 'str2': Omega[i], 'str3': Phi[i], 'str4': Kappa[i], 'str5': Direction[i],
-                                                 'str6': TimeUTC[i], 'str7': CameraID[i], 'real16':coneid[i],
-                                                 'real4': EstAcc[i], 'real5': str(Height_Eli[i]), 'str8': TimeCET[i],
-                                                 'str9': ReferenceS[i], 'str10': Producer[i], 'str11': Level[i],
-                                                 'str12': str(Comment_co[i]), 'str13': str(Comment_sdfe[i]),
-                                                 'str14': str(Status[i]), 'str15': str(GSD[i]),
-                                                 'str16': str('POLYGON((' + finallist[i] + '))')})
-                                        #IMupload.append('uploaded')
-                                        #IMreason.append('not in DB')
-                                        #DBY+=1
-                                    #else:
-                                        #IMupload.append('not uploaded')
-                                        #IMreason.append('already in DB')
-                                        #DBN+=1
+                                self.pgr.progressBar.setValue(self.completed)
+                                if overwritedata == 1:
+                                    cur.execute("select exists(SELECT imageid FROM " + DB_table + " WHERE imageid = %s)",(obj['ImageID'][i],))
+                                    if cur.fetchone()[0] is True:
+                                        Imupload.append("Updated")
+                                        updatedcount = updatedcount + 1
+                                        strengen = ("""update """ + DB_table + """ set imageid = '""" + str(obj['ImageID'][i]) + """',easting = '""" + str(obj['Easting'][i]) + """', northing = '""" + str(obj['Northing'][i]) + """',
+                                                    height = '""" + str(obj['Height'][i]) + """', omega = '""" + str(obj['Omega'][i]) + """', phi = '""" + str(obj['Phi'][i]) + """', kappa = '""" + str(obj['Kappa'][i]) + """',
+                                                    timeutc = '""" + str(obj['TimeUTC'][i]) + """', cameraid = '""" + str(obj['CameraID'][i]) + """', height_eli = '""" + str(obj['Height_Eli'][i]) + """',
+                                                    timecet = '""" + str(obj['TimeCET'][i]) + """', \"references\" = '""" + str(obj['ReferenceS'][i]) + """', producer = '""" + str(obj['Producer'][i]) + """', level = '""" + str(obj['Level'][i]) + """', comment_gs = '""" + str(obj['Comment_GS'][i]) + """', 
+                                                    comment_co = '""" + str(obj['Comment_co'][i]) + """', status = '""" + str(obj['Status'][i]) + """', gsd = '""" + str(obj['GSD'][i]) + """' where imageid =""" + """'""" + str(obj['ImageID'][i]) + """'""")
+                                        cur.execute(strengen)
+                                    else:
+                                        Imupload.append("Did not exists in table - inserted")
+                                        notupdatedcount = notupdatedcount + 1
+                                        cur.execute("""INSERT INTO """ + DB_table + """  ("imageid","easting","northing","height","omega","phi","kappa","timeutc","cameraid",
+                                                                    "height_eli","timecet",\"references\","producer","level","comment_co","comment_gs","status","gsd","geom") VALUES(%(str1)s,%(float1)s,%(float2)s,%(real3)s,%(str2)s,
+                                                                    %(str3)s,%(str4)s,%(str6)s,%(str7)s,%(real5)s,%(str8)s,%(str9)s,%(str10)s,%(str11)s,%(str12)s,%(str13)s,%(str14)s,%(str15)s,ST_GeomFromText(%(str16)s,25832))""",
+                                                    {'str1': obj['ImageID'][i], 'float1': obj['Easting'][i],
+                                                     'float2': obj['Northing'][i],
+                                                     'real3': obj['Height'][i],
+                                                     'str2': obj['Omega'][i], 'str3': obj['Phi'][i],
+                                                     'str4': obj['Kappa'][i],
+                                                     'str6': obj['TimeUTC'][i], 'str7': obj['CameraID'][i],
+                                                     'real5': str(obj['Height_Eli'][i]), 'str8': obj['TimeCET'][i],
+                                                     'str9': obj['ReferenceS'][i], 'str10': obj['Producer'][i],
+                                                     'str11': obj['Level'][i],
+                                                     'str12': str(obj['Comment_co'][i]),
+                                                     'str13': str(obj['Comment_GS'][i]),
+                                                     'str14': str(obj['Status'][i]), 'str15': str(obj['GSD'][i]),
+                                                     'str16': str('POLYGON((' + finallist[i] + '))')})
+
+                                elif overwritedata == 2:
+                                    cur.execute("select exists(SELECT imageid FROM " + DB_table + " WHERE imageid = %s)",(obj['ImageID'][i],))
+                                    if cur.fetchone()[0] is False:
+                                        Imupload.append("Inserted")
+                                        insertcount = insertcount + 1
+                                        cur.execute("""INSERT INTO """ + DB_table + """  ("imageid","easting","northing","height","omega","phi","kappa","timeutc","cameraid",
+                                                                    "height_eli","timecet",\"references\","producer","level","comment_co","comment_gs","status","gsd","geom") VALUES(%(str1)s,%(float1)s,%(float2)s,%(real3)s,%(str2)s,
+                                                                    %(str3)s,%(str4)s,%(str6)s,%(str7)s,%(real5)s,%(str8)s,%(str9)s,%(str10)s,%(str11)s,%(str12)s,%(str13)s,%(str14)s,%(str15)s,ST_GeomFromText(%(str16)s,25832))""",
+                                                    {'str1': obj['ImageID'][i], 'float1': obj['Easting'][i],
+                                                     'float2': obj['Northing'][i],
+                                                     'real3': obj['Height'][i],
+                                                     'str2': obj['Omega'][i], 'str3': obj['Phi'][i],
+                                                     'str4': obj['Kappa'][i],
+                                                     'str6': obj['TimeUTC'][i], 'str7': obj['CameraID'][i],
+                                                     'real5': str(obj['Height_Eli'][i]), 'str8': obj['TimeCET'][i],
+                                                     'str9': obj['ReferenceS'][i], 'str10': obj['Producer'][i],
+                                                     'str11': obj['Level'][i],
+                                                     'str12': str(obj['Comment_co'][i]),
+                                                     'str13': str(obj['Comment_GS'][i]),
+                                                     'str14': str(obj['Status'][i]), 'str15': str(obj['GSD'][i]),
+                                                     'str16': str('POLYGON((' + finallist[i] + '))')})
+                                    else:
+                                        Imupload.append(" Not inserted - already exists")
+                                        pass
+                                self.completed = float((n * 100) / len(obj['ImageID']))
+                                self.pgr.progressBar.setValue(self.completed)
+                                if self.completed == 100:
+                                    time.sleep(1)
+                                    self.pgr.close()
                             except psycopg2.IntegrityError:
                                 conn.rollback()
+                                print 'commit error - rolling back'
                             else:
                                 conn.commit()
+                    except Exception, e:
+                        QMessageBox.information(None, "General Info", 'ERROR:', e[0])
 
-                        except Exception, e:
-                            QMessageBox.information(None, "General Info", 'ERROR:', e[0])
-
-                    #QMessageBox.information(None, "General Error", "number of images that cant be uploaded vs images the can: "+str(DBN) + "." + str(DBY))
-                    #QMessageBox.information(None, "General Error", "ImageID of last number befor error:" + str(ImageID[DBY]))
-                        # add a feature
-                    for i in range(0,len(list)):
+                    # add a feature
+                    for i in range(0, len(obj['ImageID'])):
                         newfeat = QgsFeature()
                         newfeat.setGeometry(QgsGeometry.fromPolygon(list[i]))
                         try:
-                            newfeat.setAttributes([ImageID[i]]) #, IMupload[i], IMreason[i]])
+                            newfeat.setAttributes([obj['ImageID'][i] , Imupload[i]])
                         except (RuntimeError, TypeError, NameError, ValueError):
                             QMessageBox.information(None, "General Error", "PPC Format errors found, exiting!")
                             return
@@ -414,179 +408,160 @@ class PPC_check:
                     QgsMapLayerRegistry.instance().addMapLayer(vl)
 
                     rapporten = "Upload of: \n" + inputFilNavn + "\n \nINFO: \n"
-                    if self.dlg.OverwriteDB.isChecked():
-                        rapporten = rapporten +str(len(ImageID))+" footprints updated \n"
-#                        if DBON==0:
- #                           rapporten = rapporten + str(DBON)+" footprints not in DB \n"
-  #                      else:
-   #                         pass
-                    else:
-                        rapporten = rapporten +str(len(ImageID)) + " footprints uploaded \n"
-                        #rapporten = rapporten + str(DBN) + " footprints allready in DB \n"
+                    if overwritedata == 1:
+                        rapporten= rapporten + str(updatedcount) + ' updated \n'
+                        if notupdatedcount != 0:
+                            rapporten= rapporten + str(notupdatedcount) + ' Did not exsist in table - inserted'
+                    elif overwritedata == 2:
+                        rapporten= str(insertcount) + ' inserted'
 
                     rapporten = rapporten + "\n See rapport file for specifics"
                     QMessageBox.information(None, "Upload-DB", rapporten)
 
                 elif self.dlg.radioButtonDB_Nadir.isChecked():
-                    # Herunder skabes link til database
-                    DB_name = "geodanmark"
-                    DB_host = "c1200038"
-                    DB_port = "5432"
-                    DB_user = "postgres"
-                    DB_pass = "postgres"
-                    # Herunder opsttes tabellen der skal bruges. Findes tabellen ikke allerede opretts den
-                    DB_schema = "public"
-                    DB_geom = "geom"
-                    #DB_table = 'ppc2017'
-                    DB_table = 'ppc2017'
+                    try:
+                        # Herunder skabes link til database
+                        DB_name = self.dlg.db_name.text()
+                        DB_host = self.dlg.db_host.text()
+                        DB_port = self.dlg.db_port.text()
+                        DB_user = self.dlg.db_user.text()
+                        DB_pass = self.dlg.db_password.text()
+                        # Herunder opsttes tabellen der skal bruges. Findes tabellen ikke allerede opretts den
+                        DB_schema = "public"
+                        DB_geom = "geom"
+                        DB_table = 'ppc2017'
 
-                    conn = psycopg2.connect("dbname=" + DB_name + " user=" + DB_user + " host=" + DB_host + " password=" + DB_pass)
-                    cur = conn.cursor()
+                        # DB_table = 'oblique_2017_check_table'
+                        conn = psycopg2.connect("dbname=" + DB_name + " user=" + DB_user + " host=" + DB_host + " password=" + DB_pass)
+                        cur = conn.cursor()
 
-                    cur.execute("select exists(select * from information_schema.tables where table_name=%s)",(DB_table,))
-                    if cur.fetchone()[0]:
-                        QMessageBox.information(None, "General Info", 'Database found - uploading')
-                    else:
-                        QMessageBox.information(None, "General Info", 'Creating database ' + DB_table)
-                        cur.execute(
-                            "CREATE TABLE " + DB_schema + "." + DB_table + "(imageid TEXT PRIMARY KEY, easting float, northing float, height real,omega real, phi real, Kappa real, timeutc text, cameraid text, height_eli text, timecet text, \"references\" text, producer text, level real, comment_co text, comment_gs text, status text, gsd text, geom geometry)")
-                        conn.commit()
+                        cur.execute("select exists(select * from information_schema.tables where table_name=%s)",(DB_table,))
+                        if cur.fetchone()[0]:
+                            QMessageBox.information(None, "General Info", 'Database found - uploading')
+                        else:
+                            QMessageBox.information(None, "General Info", 'Creating database ' + DB_table)
+                            cur.execute(
+                                "CREATE TABLE " + DB_schema + "." + DB_table + "(imageid TEXT PRIMARY KEY, easting float, northing float, height real,omega real, phi real, kappa real, direction text, timeutc text, cameraid text, "
+                                                                               "coneid real, estacc real, height_eli text, timecet text, \"references\" text, producer text, level real, comment_co text, comment_gs text, status text, gsd text, geom geometry)")
+                            conn.commit()
 
-                    IDs = []
-                    #cur.execute('SELECT * from ' + DB_table)
-                    #rows = cur.fetchall()
-                    #for row in rows:
-                    #    ii = row[0]
-                    #    IDs.append(ii)
-                    list = []
-                    finallist = []
-                    ImageID = []
-                    East = []
-                    North = []
-                    Height = []
-                    Omega = []
-                    Phi = []
-                    Kappa = []
-                    TimeUTC = []
-                    CameraID = []
-                    Height_Eli = []
-                    TimeCET = []
-                    ReferenceS = []
-                    Producer = []
-                    Level = []
-                    Comment_co = []
-                    Comment_sdfe = []
-                    Status = []
-                    GSD = []
-                    IMupload=[]
-                    IMreason=[]
-                    DBY=0
-                    DBN=0
-                    DBOY = 0
-                    DBON = 0
-                    for feat in selection:
-                        #attrs = ft.attributes()
-                        ImageID.append(feat['ImageID'])
-                        East.append(feat['Easting'])
-                        North.append(feat['Northing'])
-                        Height.append(feat['Height'])
-                        Omega.append(feat['Omega'])
-                        Phi.append(feat['Phi'])
-                        Kappa.append(feat['Kappa'])
-                        TimeUTC.append(feat['TimeUTC'])
-                        CameraID.append(feat['CameraID'])
-                        Height_Eli.append(feat['Height_Eli'])
-                        TimeCET.append(feat['TimeCET'])
-                        ReferenceS.append(feat['ReferenceS'])
-                        Producer.append(feat['Producer'])
-                        Level.append(feat['Level'])
-                        Comment_co.append(feat['Comment_Co'])
-                        Comment_sdfe.append(feat['Comment_GS'])
-                        Status.append(feat['Status'])
-                        GSD.append(feat['GSD'])
-                        geom = feat.geometry()
-                        Geometri = geom.asPoint()
-                        list.append(Geometri)
+                        listofattrs = ['ImageID', 'Easting', 'Northing', 'Height', 'Omega', 'Phi', 'Kappa', 'TimeUTC',
+                                       'CameraID', 'Height_Eli', 'TimeCET', 'ReferenceS', 'Producer', 'Level', 'Comment_co',
+                                       'Comment_GS', 'Status', 'GSD']
+                        obj = {}
+                        for n in listofattrs:
+                            obj[n] = []
 
-                    for ll in list:
-                        test = str(ll)
-                        test1 = test.replace("[", "")
-                        test2 = test1.replace("]", "")
-                        test3 = test2.replace(",", " ")
-                        test4 = test3.replace(")  (", "), (")
-                        test5 = test4.replace("(", "")
-                        test6 = test5.replace(")", "")
-                        finallist.append(test6)
+                        list = []
+                        for feat in selection:
+                            for i in obj.keys():
+                                obj[i].append(feat[i])
+                            geom = feat.geometry()
+                            Geometri = geom.asPoint()
+                            list.append(Geometri)
+
+                        finallist = []
+                        for ll in list:
+                            finallist.append(str(ll).replace("[", "").replace("]", "").replace(",", " ").replace(")  (", "), (").replace("(", "").replace(")", ""))
+
+                    except Exception, e:
+                        QMessageBox.information(None, "General Info", 'ERROR:', e[0])
+
+
                     if self.dlg.OverwriteDB.isChecked():
-                        try:
-                            cur = conn.cursor()
-                            try:
-                                for i in range(0, (len(ImageID))):
-                                    #if ImageID[i] in IDs:
-                                    strengen = ("""update """ + DB_table + """ set imageid = '""" + str(ImageID[i]) + """',easting = '""" + str(East[i]) + """', northing = '""" + str(North[i]) + """',
-                                                    height = '""" + str(Height[i]) + """', omega = '""" + str(Omega[i]) + """', phi = '""" + str(Phi[i]) + """', kappa = '""" + str(Kappa[i]) + """',
-                                                    timeutc = '""" + str(TimeUTC[i]) + """', cameraid = '""" + str(CameraID[i]) + """', height_eli = '""" + str(Height_Eli[i]) + """',
-                                                    timecet = '""" + str(TimeCET[i]) + """', \"references\" = '""" + str(ReferenceS[i]) + """', producer = '""" + str(Producer[i]) + """', level = '""" + str(Level[i]) + """', comment_gs = '""" + str(Comment_sdfe[i]) + """', 
-                                                    comment_co = '""" + str(Comment_co[i]) + """', status = 'test""" + str(Status[i]) + """', gsd = '""" + str(GSD[i]) + """' where imageid =""" + """'""" + str(ImageID[i]) + """'""")
-                                    cur.execute(strengen)
-                                    #IMupload.append('updated')
-                                    #IMreason.append('replaced existing')
-                                    #DBOY += 1
-                                    #else:
-                                     #   IMupload.append('not updated')
-                                      #  IMreason.append('not in DB')
-                                       # DBON += 1
-
-                            except psycopg2.IntegrityError:
-                                conn.rollback()
-                                print 'commit error - rolling back'
-                            else:
-                                conn.commit()
-
-                        except Exception, e:
-                            QMessageBox.information(None, "General Info", 'ERROR:', e[0])
+                        overwritedata=1
+                        QMessageBox.information(None, "General Info", 'Overwriting existing data')
                     else:
-                        try:
-                            cur = conn.cursor()
-                            try:
-                                for i in range(0, (len(ImageID))):
-                                    #if ImageID[i] not in IDs:
-                                    cur.execute("""INSERT INTO """ + DB_table + """  ("imageid","easting","northing","height","omega","phi","kappa","timeutc","cameraid",
-                                                    "height_eli","timecet",\"references\","producer","level","comment_co","comment_gs","status","gsd","geom") VALUES(%(str1)s,%(float1)s,%(float2)s,%(real3)s,%(str2)s,
-                                                    %(str3)s,%(str4)s,%(str6)s,%(str7)s,%(real5)s,%(str8)s,%(str9)s,%(str10)s,%(str11)s,%(str12)s,%(str13)s,%(str14)s,%(str15)s,ST_GeomFromText(%(str16)s,25832))""",
-                                                {'str1': ImageID[i], 'float1': East[i], 'float2': North[i],
-                                                 'real3': Height[i],
-                                                 'str2': Omega[i], 'str3': Phi[i], 'str4': Kappa[i],
-                                                 'str6': TimeUTC[i], 'str7': CameraID[i],
-                                                 'real5': str(Height_Eli[i]), 'str8': TimeCET[i],
-                                                 'str9': ReferenceS[i], 'str10': Producer[i], 'str11': Level[i],
-                                                 'str12': str(Comment_co[i]), 'str13': str(Comment_sdfe[i]),
-                                                 'str14': str(Status[i]), 'str15': str(GSD[i]),
-                                                 'str16': str('POINT(' + finallist[i] + ')')})
-                                        #IMupload.append('uploaded')
-                                        #IMreason.append('not in DB')
-                                        #DBY += 1
-                                    #else:
-                                        #IMupload.append('not uploaded')
-                                        #IMreason.append('already in DB')
-                                        #DBN += 1
+                        QMessageBox.information(None, "General Info", 'Not overwriting existing data, only adding')
+                        overwritedata=2
 
+                    notupdatedcount = 0
+                    updatedcount = 0
+                    insertcount = 0
+                    Imupload=[]
+                    try:
+                        n=0
+                        #add progress bar
+                        self.pgr.label.setText("Uploading...")
+                        self.pgr.show()
+                        self.completed = 0
+                        cur=conn.cursor()
+                        for i in range(0, (len(obj['ImageID']))):
+                            try:
+                                if overwritedata == 1:
+                                    cur.execute("select exists(SELECT imageid FROM " + DB_table + " WHERE imageid = %s)",(obj['ImageID'][i],))
+                                    if cur.fetchone()[0] is True:
+                                        Imupload.append("Updated")
+                                        updatedcount = updatedcount + 1
+                                        strengen = ("""update """ + DB_table + """ set imageid = '""" + str(obj['ImageID'][i]) + """',easting = '""" + str(obj['Easting'][i]) + """', northing = '""" + str(obj['Northing'][i]) + """',
+                                                    height = '""" + str(obj['Height'][i]) + """', omega = '""" + str(obj['Omega'][i]) + """', phi = '""" + str(obj['Phi'][i]) + """', kappa = '""" + str(obj['Kappa'][i]) + """',
+                                                    timeutc = '""" + str(obj['TimeUTC'][i]) + """', cameraid = '""" + str(obj['CameraID'][i]) + """', height_eli = '""" + str(obj['Height_Eli'][i]) + """',
+                                                    timecet = '""" + str(obj['TimeCET'][i]) + """', \"references\" = '""" + str(obj['ReferenceS'][i]) + """', producer = '""" + str(obj['Producer'][i]) + """', level = '""" + str(obj['Level'][i]) + """', comment_gs = '""" + str(obj['Comment_GS'][i]) + """', 
+                                                    comment_co = '""" + str(obj['Comment_co'][i]) + """', status = '""" + str(obj['Status'][i]) + """', gsd = '""" + str(obj['GSD'][i]) + """' where imageid =""" + """'""" + str(obj['ImageID'][i]) + """'""")
+                                        cur.execute(strengen)
+                                    else:
+                                        Imupload.append("Did not exists in table - inserted")
+                                        notupdatedcount = notupdatedcount + 1
+                                        cur.execute("""INSERT INTO """ + DB_table + """  ("imageid","easting","northing","height","omega","phi","kappa","timeutc","cameraid",
+                                                                    "height_eli","timecet",\"references\","producer","level","comment_co","comment_gs","status","gsd","geom") VALUES(%(str1)s,%(float1)s,%(float2)s,%(real3)s,%(str2)s,
+                                                                    %(str3)s,%(str4)s,%(str6)s,%(str7)s,%(real5)s,%(str8)s,%(str9)s,%(str10)s,%(str11)s,%(str12)s,%(str13)s,%(str14)s,%(str15)s,ST_GeomFromText(%(str16)s,25832))""",
+                                                    {'str1': obj['ImageID'][i], 'float1': obj['Easting'][i],
+                                                     'float2': obj['Northing'][i],
+                                                     'real3': obj['Height'][i],
+                                                     'str2': obj['Omega'][i], 'str3': obj['Phi'][i],
+                                                     'str4': obj['Kappa'][i],
+                                                     'str6': obj['TimeUTC'][i], 'str7': obj['CameraID'][i],
+                                                     'real5': str(obj['Height_Eli'][i]), 'str8': obj['TimeCET'][i],
+                                                     'str9': obj['ReferenceS'][i], 'str10': obj['Producer'][i],
+                                                     'str11': obj['Level'][i],
+                                                     'str12': str(obj['Comment_co'][i]),
+                                                     'str13': str(obj['Comment_GS'][i]),
+                                                     'str14': str(obj['Status'][i]), 'str15': str(obj['GSD'][i]),
+                                                     'str16': str('POINT((' + finallist[i] + '))')})
+
+                                elif overwritedata == 2:
+                                    cur.execute("select exists(SELECT imageid FROM " + DB_table + " WHERE imageid = %s)",(obj['ImageID'][i],))
+                                    if cur.fetchone()[0] is False:
+                                        Imupload.append("Inserted")
+                                        insertcount = insertcount + 1
+                                        cur.execute("""INSERT INTO """ + DB_table + """  ("imageid","easting","northing","height","omega","phi","kappa","timeutc","cameraid",
+                                                                    "height_eli","timecet",\"references\","producer","level","comment_co","comment_gs","status","gsd","geom") VALUES(%(str1)s,%(float1)s,%(float2)s,%(real3)s,%(str2)s,
+                                                                    %(str3)s,%(str4)s,%(str6)s,%(str7)s,%(real5)s,%(str8)s,%(str9)s,%(str10)s,%(str11)s,%(str12)s,%(str13)s,%(str14)s,%(str15)s,ST_GeomFromText(%(str16)s,25832))""",
+                                                    {'str1': obj['ImageID'][i], 'float1': obj['Easting'][i],
+                                                     'float2': obj['Northing'][i],
+                                                     'real3': obj['Height'][i],
+                                                     'str2': obj['Omega'][i], 'str3': obj['Phi'][i],
+                                                     'str4': obj['Kappa'][i],
+                                                     'str6': obj['TimeUTC'][i], 'str7': obj['CameraID'][i],
+                                                     'real5': str(obj['Height_Eli'][i]), 'str8': obj['TimeCET'][i],
+                                                     'str9': obj['ReferenceS'][i], 'str10': obj['Producer'][i],
+                                                     'str11': obj['Level'][i],
+                                                     'str12': str(obj['Comment_co'][i]),
+                                                     'str13': str(obj['Comment_GS'][i]),
+                                                     'str14': str(obj['Status'][i]), 'str15': str(obj['GSD'][i]),
+                                                     'str16': str('POINT((' + finallist[i] + '))')})
+                                    else:
+                                        Imupload.append(" Not inserted - already exists")
+                                        pass
+                                self.completed = float((n * 100) / len(obj['ImageID']))
+                                self.pgr.progressBar.setValue(self.completed)
+                                if self.completed == 100:
+                                    time.sleep(1)
+                                    self.pgr.close()
                             except psycopg2.IntegrityError:
                                 conn.rollback()
                                 print 'commit error - rolling back'
                             else:
                                 conn.commit()
-
-                        except Exception, e:
-                            QMessageBox.information(None, "General Info", 'ERROR:', e[0])
+                    except Exception, e:
+                        QMessageBox.information(None, "General Info", 'ERROR:', e[0])
 
                     # add a feature
-                        # add a feature
-                    for i in range(0,len(list)):
+                    for i in range(0, len(finallist)):
                         newfeat = QgsFeature()
-                        newfeat.setGeometry(QgsGeometry.fromPoint(list[i]))
+                        newfeat.setGeometry(QgsGeometry.fromPolygon(list[i]))
                         try:
-                            newfeat.setAttributes([ImageID[i]])# , IMupload[i], IMreason[i]])
+                            newfeat.setAttributes([obj['ImageID'][i] , Imupload[i]])
                         except (RuntimeError, TypeError, NameError, ValueError):
                             QMessageBox.information(None, "General Error", "PPC Format errors found, exiting!")
                             return
@@ -599,19 +574,15 @@ class PPC_check:
                     QgsMapLayerRegistry.instance().addMapLayer(vl)
 
                     rapporten = "Upload of: \n" + inputFilNavn + "\n \nINFO: \n"
-                    if self.dlg.OverwriteDB.isChecked():
-                        rapporten = rapporten + str(len(ImageID)) + " footprints updated \n"
-                        #if DBON==0:
-                        #    rapporten = rapporten + str(DBON) + " footprints not in DB \n"
-                        #else:
-                        #    pass
-                    else:
-                        rapporten = rapporten + str(len(list))+" footprints uploaded \n"
-                        #rapporten = rapporten + str(DBN)+" footprints allready in DB \n"
+                    if overwritedata == 1:
+                        rapporten= rapporten + str(updatedcount) + ' updated \n'
+                        if notupdatedcount != 0:
+                            rapporten= rapporten + str(notupdatedcount) + ' Did not exsist in table - inserted'
+                    elif overwritedata == 2:
+                        rapporten= str(insertcount) + ' inserted'
 
                     rapporten = rapporten + "\n See rapport file for specifics"
                     QMessageBox.information(None, "Upload-DB", rapporten)
-
 
     def checkA( self ):
         inputFilNavnPPC = unicode( self.dlg.inShapeAPPC.currentText() )
@@ -669,7 +640,17 @@ class PPC_check:
                     ImageDir = SplitLine[1].rstrip('\r\n')
                 elif SplitLine [0] == "DBImageDir:":
                     DBImageDir = SplitLine[1].rstrip('\r\n')
-        return (ProjectLog,MainLog,PPC_GSD,Sun,Tilt,CamCal,ImageDir,DBImageDir)
+                elif SplitLine[0] == "DB_n:":
+                    DBname = SplitLine[1].rstrip('\r\n')
+                elif SplitLine [0] == "DB_h:":
+                    DBhost = SplitLine[1].rstrip('\r\n')
+                elif SplitLine [0] == "DB_po:":
+                    DBport = SplitLine[1].rstrip('\r\n')
+                elif SplitLine [0] == "DB_u:":
+                    DBuser = SplitLine[1].rstrip('\r\n')
+                elif SplitLine [0] == "DB_pa:":
+                    DBpass = SplitLine[1].rstrip('\r\n')
+        return (ProjectLog,MainLog,PPC_GSD,Sun,Tilt,CamCal,ImageDir,DBImageDir,DBname,DBhost,DBport,DBuser,DBpass)
 
     def readCameras(self,camdir):
         caminfo=[]
@@ -1349,11 +1330,11 @@ class PPC_check:
                     ImageID2.append(os.path.basename(os.path.normpath(i)))
                 blok = ImageID2[0][5:10]
 
-                DB_name = "geodanmark"
-                DB_host = "c1200038"
-                DB_port = "5432"
-                DB_user = "postgres"
-                DB_pass = "postgres"
+                DB_name = self.dlg.db_name_2.text()
+                DB_host = self.dlg.db_host_2.text()
+                DB_port = self.dlg.db_port_2.text()
+                DB_user = self.dlg.db_user_2.text()
+                DB_pass = self.dlg.db_password_2.text()
                 # Herunder opsttes tabellen der skal bruges. Findes tabellen ikke allerede opretts den
                 DB_schema = "public"
                 DB_geom = "geom"
@@ -1396,7 +1377,7 @@ class PPC_check:
                     EstAcc = []
                     coneid = []
 
-                    cur.execute('SELECT * from ' + DB_table + ' WHERE imageid LIKE ' + '\'%' + blok + '%\'')
+                    cur.execute('SELECT * from ' + DB_table + ' WHERE imageid LIKE \'%2017_' + blok + '%\'')
                     rows = cur.fetchall()
                     for row in rows:
                         ImageID.append(row[0])
@@ -1446,9 +1427,12 @@ class PPC_check:
                         GSD.append(row[18])
 
                 for i in ImageID:
-                    ImageID1.append(i + ".tif")
-
-
+                    if self.dlg.lineEditDBImageDir.text().endswith('TIFF'):
+                        ImageID1.append(i + ".tif")
+                    elif self.dlg.lineEditDBImageDir.text().endswith('JPEG'):
+                        ImageID1.append(i + ".jpg")
+                    else:
+                        QMessageBox.information(None, "General Error", "Choose one of the folders: Image_TIFF or Image_JPEG")
                 try:
                     ImageDirPath = str(self.dlg.lineEditDBImageDir.text())
                     ImageDirPath = ImageDirPath.replace("\\", "/")

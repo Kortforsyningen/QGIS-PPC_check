@@ -9,3 +9,8 @@ Tilt: 5
 CamCal: -
 ImageDir: -
 DBImageDir: -
+DB_n: geodanmark
+DB_h: c1200038
+DB_po: 5432
+DB_u: postgres
+DB_pa: postgres
