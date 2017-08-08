@@ -13,4 +13,4 @@ DB_n: DB_name
 DB_h: DB_host
 DB_po: DB_port
 DB_u: DB_username
-DB_pa:DB_password
+DB_pa: DB_password
