@@ -85,15 +85,9 @@ class PPC_check:
         #    self.dlg.lineEditDBImageDir.setText("C:\Users\B020736\Documents\Test_GeoDK_2017\TIF_GeoDK")
 
         self.dlg.pushButton_InputPPC.clicked.connect(self.showFileSelectDialogInputPPC)
-        self.dlg.pushButton_InputDB.clicked.connect(self.showFileSelectDialogInputDB)
-        self.dlg.pushButton_uploadDB.clicked.connect(self.showFileSelectDialogUploadDB)
         self.dlg.radioButtonPPC_ob.toggled.connect(self.radio1_ob_clicked)
         self.dlg.radioButtonPPC_Nadir.toggled.connect(self.radio1_Nadir_clicked)
-        self.dlg.radioButtonDBQC_ob.toggled.connect(self.radio4_ob_clicked)
-        self.dlg.radioButtonDBQC_Nadir.toggled.connect(self.radio4_Nadir_clicked)
         QObject.connect(self.dlg.inShapeAPPC, SIGNAL("currentIndexChanged(QString)" ), self.checkA )
-        QObject.connect(self.dlg.inShapeDB, SIGNAL("currentIndexChanged(QString)" ), self.checkA )
-        QObject.connect(self.dlg.inShapeAImage, SIGNAL("currentIndexChanged(QString)" ), self.checkA )
 
         self.dlg.checkBoxPic.setChecked(True)
         self.dlg.checkBoxGSD.setChecked(True)
@@ -108,18 +102,6 @@ class PPC_check:
         self.dlg.lineEditRef.setText('ETRS89,UTM32N,DVR90')
         self.dlg.checkBoxVoids.setChecked(True)
         self.dlg.radioButtonPPC_Nadir.setChecked(True)
-        self.dlg.radioButtonDB_Nadir.setChecked(True)
-        self.dlg.radioButtonDBQC_Nadir.setChecked(True)
-        self.dlg.db_name.setText(self.DBname)
-        self.dlg.db_host.setText(self.DBhost)
-        self.dlg.db_port.setText(self.DBport)
-        self.dlg.db_user.setText(self.DBuser)
-        self.dlg.db_password.setText(self.DBpass)
-        self.dlg.db_name_2.setText(self.DBname)
-        self.dlg.db_host_2.setText(self.DBhost)
-        self.dlg.db_port_2.setText(self.DBport)
-        self.dlg.db_user_2.setText(self.DBuser)
-        self.dlg.db_password_2.setText(self.DBpass)
 
         self.pgr = PPC_checkDialogII()
         # add funcionallity to pushbutton
@@ -195,14 +177,6 @@ class PPC_check:
        fname = QFileDialog.getExistingDirectory( None, 'Open camera calibration directory', os.path.dirname(__file__)+"\\CameraCalibrations\\")
        self.dlg.lineEditCamDir.setText(fname)
 
-    def showFileSelectDialogInputImage(self):
-       fname = QFileDialog.getExistingDirectory( None, 'Open image directory', os.path.dirname(__file__))
-       self.dlg.lineEditImageDir.setText(fname)
-
-    def showFileSelectDialogInputDB(self):
-       fname = QFileDialog.getExistingDirectory( None, 'Open image directory', os.path.dirname(__file__))
-       self.dlg.lineEditDBImageDir.setText(fname)
-
     def radio1_ob_clicked(self, enabled):
         if enabled:
             self.dlg.lineEditGSD.setText('0.10')
@@ -214,380 +188,8 @@ class PPC_check:
             self.dlg.lineEditSUN.setText('25')
             self.dlg.checkBoxVoids.setChecked(False)
 
-    def radio4_ob_clicked(self, enabled):
-        obtemp=['footprints2017']
-        if enabled:
-            self.dlg.inShapeAImage.clear()
-            self.dlg.inShapeAImage.addItems(obtemp)
-    def radio4_Nadir_clicked(self,enabled):
-        nadirtemp = ['ppc2017']
-        if enabled:
-            self.dlg.inShapeAImage.clear()
-            self.dlg.inShapeAImage.addItems(nadirtemp)
-
-    def showFileSelectDialogUploadDB(self):
-        inputFilNavn = self.dlg.inShapeDB.currentText()
-        canvas = self.iface.mapCanvas()
-        allLayers = canvas.layers()
-
-        for i in allLayers:
-            # QMessageBox.information(None, "status",i.name())
-            if (i.name() == inputFilNavn):
-                layer = i
-
-                # create virtual layer
-                vl = QgsVectorLayer("Point", "Rapport DB-upload: " + str(inputFilNavn), "memory")
-                pr = vl.dataProvider()
-                # vl.startEditing()
-                # add fields
-                pr.addAttributes([QgsField("ImageID", QVariant.String),QgsField("Upload", QVariant.String)]) #,QgsField("Reason", QVariant.String)])
-
-                if self.dlg.useSelectedDB.isChecked():
-                    selection = layer.selectedFeatures()
-                    QMessageBox.information(None, "status", "uploading selected features")
-                else:
-                    selection = layer.getFeatures()
-                    QMessageBox.information(None, "status", "uploading all features")
-
-                if self.dlg.radioButtonDB_ob.isChecked():
-                    try:
-                        # Herunder skabes link til database
-                        DB_name = self.dlg.db_name.text()
-                        DB_host = self.dlg.db_host.text()
-                        DB_port = self.dlg.db_port.text()
-                        DB_user = self.dlg.db_user.text()
-                        DB_pass = self.dlg.db_password.text()
-                        # Herunder opsttes tabellen der skal bruges. Findes tabellen ikke allerede opretts den
-                        DB_schema = "public"
-                        DB_geom = "geom"
-                        DB_table = 'footprints2017'
-
-                        # DB_table = 'oblique_2017_check_table'
-                        conn = psycopg2.connect("dbname=" + DB_name + " user=" + DB_user + " host=" + DB_host + " password=" + DB_pass)
-                        cur = conn.cursor()
-
-                        cur.execute("select exists(select * from information_schema.tables where table_name=%s)",(DB_table,))
-                        if cur.fetchone()[0]:
-                            QMessageBox.information(None, "General Info", 'Database found - uploading')
-                        else:
-                            QMessageBox.information(None, "General Info", 'Creating database ' + DB_table)
-                            cur.execute(
-                                "CREATE TABLE " + DB_schema + "." + DB_table + "(imageid TEXT PRIMARY KEY, easting float, northing float, height real,omega real, phi real, kappa real, direction text, timeutc text, cameraid text, "
-                                                                               "coneid real, estacc real, height_eli text, timecet text, \"references\" text, producer text, level real, comment_co text, comment_gs text, status text, gsd text, geom geometry)")
-                            conn.commit()
-
-                        listofattrs = ['ImageID', 'Easting', 'Northing', 'Height', 'Omega', 'Phi', 'Kappa', 'TimeUTC',
-                                       'CameraID', 'Height_Eli', 'TimeCET', 'ReferenceS', 'Producer', 'Level', 'Comment_co',
-                                       'Comment_GS', 'Status', 'GSD']
-                        obj = {}
-                        for n in listofattrs:
-                            obj[n] = []
-
-                        list = []
-                        for feat in selection:
-                            for i in obj.keys():
-                                obj[i].append(feat[i])
-                            geom = feat.geometry()
-                            Geometri = geom.asPolygon()
-                            list.append(Geometri)
-
-                        finallist = []
-                        for ll in list:
-                            finallist.append(str(ll).replace("[", "").replace("]", "").replace(",", " ").replace(")  (", "), (").replace("(", "").replace(")", ""))
-
-                    except Exception, e:
-                        QMessageBox.information(None, "General Info", 'ERROR:', e[0])
-
-
-                    if self.dlg.OverwriteDB.isChecked():
-                        overwritedata=1
-                        QMessageBox.information(None, "General Info", 'Overwriting existing data')
-                    else:
-                        QMessageBox.information(None, "General Info", 'Not overwriting existing data, only adding')
-                        overwritedata=2
-
-                    notupdatedcount = 0
-                    updatedcount = 0
-                    insertcount = 0
-                    Imupload=[]
-                    try:
-                        n=0
-                        #add progress bar
-                        self.pgr.label.setText("Uploading...")
-                        self.pgr.show()
-                        self.completed = 0
-                        cur=conn.cursor()
-                        for i in range(0, (len(obj['ImageID']))):
-                            n+=1
-                            print n
-                            try:
-                                self.pgr.progressBar.setValue(self.completed)
-                                if overwritedata == 1:
-                                    cur.execute("select exists(SELECT imageid FROM " + DB_table + " WHERE imageid = %s)",(obj['ImageID'][i],))
-                                    if cur.fetchone()[0] is True:
-                                        Imupload.append("Updated")
-                                        updatedcount = updatedcount + 1
-                                        strengen = ("""update """ + DB_table + """ set imageid = '""" + str(obj['ImageID'][i]) + """',easting = '""" + str(obj['Easting'][i]) + """', northing = '""" + str(obj['Northing'][i]) + """',
-                                                    height = '""" + str(obj['Height'][i]) + """', omega = '""" + str(obj['Omega'][i]) + """', phi = '""" + str(obj['Phi'][i]) + """', kappa = '""" + str(obj['Kappa'][i]) + """',
-                                                    timeutc = '""" + str(obj['TimeUTC'][i]) + """', cameraid = '""" + str(obj['CameraID'][i]) + """', height_eli = '""" + str(obj['Height_Eli'][i]) + """',
-                                                    timecet = '""" + str(obj['TimeCET'][i]) + """', \"references\" = '""" + str(obj['ReferenceS'][i]) + """', producer = '""" + str(obj['Producer'][i]) + """', level = '""" + str(obj['Level'][i]) + """', comment_gs = '""" + str(obj['Comment_GS'][i]) + """', 
-                                                    comment_co = '""" + str(obj['Comment_co'][i]) + """', status = '""" + str(obj['Status'][i]) + """', gsd = '""" + str(obj['GSD'][i]) + """' where imageid =""" + """'""" + str(obj['ImageID'][i]) + """'""")
-                                        cur.execute(strengen)
-                                    else:
-                                        Imupload.append("Did not exists in table - inserted")
-                                        notupdatedcount = notupdatedcount + 1
-                                        cur.execute("""INSERT INTO """ + DB_table + """  ("imageid","easting","northing","height","omega","phi","kappa","timeutc","cameraid",
-                                                                    "height_eli","timecet",\"references\","producer","level","comment_co","comment_gs","status","gsd","geom") VALUES(%(str1)s,%(float1)s,%(float2)s,%(real3)s,%(str2)s,
-                                                                    %(str3)s,%(str4)s,%(str6)s,%(str7)s,%(real5)s,%(str8)s,%(str9)s,%(str10)s,%(str11)s,%(str12)s,%(str13)s,%(str14)s,%(str15)s,ST_GeomFromText(%(str16)s,25832))""",
-                                                    {'str1': obj['ImageID'][i], 'float1': obj['Easting'][i],
-                                                     'float2': obj['Northing'][i],
-                                                     'real3': obj['Height'][i],
-                                                     'str2': obj['Omega'][i], 'str3': obj['Phi'][i],
-                                                     'str4': obj['Kappa'][i],
-                                                     'str6': obj['TimeUTC'][i], 'str7': obj['CameraID'][i],
-                                                     'real5': str(obj['Height_Eli'][i]), 'str8': obj['TimeCET'][i],
-                                                     'str9': obj['ReferenceS'][i], 'str10': obj['Producer'][i],
-                                                     'str11': obj['Level'][i],
-                                                     'str12': str(obj['Comment_co'][i]),
-                                                     'str13': str(obj['Comment_GS'][i]),
-                                                     'str14': str(obj['Status'][i]), 'str15': str(obj['GSD'][i]),
-                                                     'str16': str('POLYGON((' + finallist[i] + '))')})
-
-                                elif overwritedata == 2:
-                                    cur.execute("select exists(SELECT imageid FROM " + DB_table + " WHERE imageid = %s)",(obj['ImageID'][i],))
-                                    if cur.fetchone()[0] is False:
-                                        Imupload.append("Inserted")
-                                        insertcount = insertcount + 1
-                                        cur.execute("""INSERT INTO """ + DB_table + """  ("imageid","easting","northing","height","omega","phi","kappa","timeutc","cameraid",
-                                                                    "height_eli","timecet",\"references\","producer","level","comment_co","comment_gs","status","gsd","geom") VALUES(%(str1)s,%(float1)s,%(float2)s,%(real3)s,%(str2)s,
-                                                                    %(str3)s,%(str4)s,%(str6)s,%(str7)s,%(real5)s,%(str8)s,%(str9)s,%(str10)s,%(str11)s,%(str12)s,%(str13)s,%(str14)s,%(str15)s,ST_GeomFromText(%(str16)s,25832))""",
-                                                    {'str1': obj['ImageID'][i], 'float1': obj['Easting'][i],
-                                                     'float2': obj['Northing'][i],
-                                                     'real3': obj['Height'][i],
-                                                     'str2': obj['Omega'][i], 'str3': obj['Phi'][i],
-                                                     'str4': obj['Kappa'][i],
-                                                     'str6': obj['TimeUTC'][i], 'str7': obj['CameraID'][i],
-                                                     'real5': str(obj['Height_Eli'][i]), 'str8': obj['TimeCET'][i],
-                                                     'str9': obj['ReferenceS'][i], 'str10': obj['Producer'][i],
-                                                     'str11': obj['Level'][i],
-                                                     'str12': str(obj['Comment_co'][i]),
-                                                     'str13': str(obj['Comment_GS'][i]),
-                                                     'str14': str(obj['Status'][i]), 'str15': str(obj['GSD'][i]),
-                                                     'str16': str('POLYGON((' + finallist[i] + '))')})
-                                    else:
-                                        Imupload.append(" Not inserted - already exists")
-                                        pass
-                                self.completed = float((n * 100) / len(obj['ImageID']))
-                                self.pgr.progressBar.setValue(self.completed)
-                                if self.completed == 100:
-                                    time.sleep(1)
-                                    self.pgr.close()
-                            except psycopg2.IntegrityError:
-                                conn.rollback()
-                                print 'commit error - rolling back'
-                            else:
-                                conn.commit()
-                    except Exception, e:
-                        QMessageBox.information(None, "General Info", 'ERROR:', e[0])
-
-                    # add a feature
-                    for i in range(0, len(obj['ImageID'])):
-                        newfeat = QgsFeature()
-                        newfeat.setGeometry(QgsGeometry.fromPolygon(list[i]))
-                        try:
-                            newfeat.setAttributes([obj['ImageID'][i] , Imupload[i]])
-                        except (RuntimeError, TypeError, NameError, ValueError):
-                            QMessageBox.information(None, "General Error", "PPC Format errors found, exiting!")
-                            return
-                        pr.addFeatures([newfeat])
-
-                    # update layer's extent when new features have been added
-                    # because change of extent in provider is not propagated to the layer
-                    vl.updateExtents()
-                    vl.updateFields()
-                    QgsMapLayerRegistry.instance().addMapLayer(vl)
-
-                    rapporten = "Upload of: \n" + inputFilNavn + "\n \nINFO: \n"
-                    if overwritedata == 1:
-                        rapporten= rapporten + str(updatedcount) + ' updated \n'
-                        if notupdatedcount != 0:
-                            rapporten= rapporten + str(notupdatedcount) + ' Did not exsist in table - inserted'
-                    elif overwritedata == 2:
-                        rapporten= str(insertcount) + ' inserted'
-
-                    rapporten = rapporten + "\n See rapport file for specifics"
-                    QMessageBox.information(None, "Upload-DB", rapporten)
-
-                elif self.dlg.radioButtonDB_Nadir.isChecked():
-                    try:
-                        # Herunder skabes link til database
-                        DB_name = self.dlg.db_name.text()
-                        DB_host = self.dlg.db_host.text()
-                        DB_port = self.dlg.db_port.text()
-                        DB_user = self.dlg.db_user.text()
-                        DB_pass = self.dlg.db_password.text()
-                        # Herunder opsttes tabellen der skal bruges. Findes tabellen ikke allerede opretts den
-                        DB_schema = "public"
-                        DB_geom = "geom"
-                        DB_table = 'ppc2017'
-
-                        # DB_table = 'oblique_2017_check_table'
-                        conn = psycopg2.connect("dbname=" + DB_name + " user=" + DB_user + " host=" + DB_host + " password=" + DB_pass)
-                        cur = conn.cursor()
-
-                        cur.execute("select exists(select * from information_schema.tables where table_name=%s)",(DB_table,))
-                        if cur.fetchone()[0]:
-                            QMessageBox.information(None, "General Info", 'Database found - uploading')
-                        else:
-                            QMessageBox.information(None, "General Info", 'Creating database ' + DB_table)
-                            cur.execute(
-                                "CREATE TABLE " + DB_schema + "." + DB_table + "(imageid TEXT PRIMARY KEY, easting float, northing float, height real,omega real, phi real, kappa real, direction text, timeutc text, cameraid text, "
-                                                                               "coneid real, estacc real, height_eli text, timecet text, \"references\" text, producer text, level real, comment_co text, comment_gs text, status text, gsd text, geom geometry)")
-                            conn.commit()
-
-                        listofattrs = ['ImageID', 'Easting', 'Northing', 'Height', 'Omega', 'Phi', 'Kappa', 'TimeUTC',
-                                       'CameraID', 'Height_Eli', 'TimeCET', 'ReferenceS', 'Producer', 'Level', 'Comment_co',
-                                       'Comment_GS', 'Status', 'GSD']
-                        obj = {}
-                        for n in listofattrs:
-                            obj[n] = []
-
-                        list = []
-                        for feat in selection:
-                            for i in obj.keys():
-                                obj[i].append(feat[i])
-                            geom = feat.geometry()
-                            Geometri = geom.asPoint()
-                            list.append(Geometri)
-
-                        finallist = []
-                        for ll in list:
-                            finallist.append(str(ll).replace("[", "").replace("]", "").replace(",", " ").replace(")  (", "), (").replace("(", "").replace(")", ""))
-
-                    except Exception, e:
-                        QMessageBox.information(None, "General Info", 'ERROR:', e[0])
-
-
-                    if self.dlg.OverwriteDB.isChecked():
-                        overwritedata=1
-                        QMessageBox.information(None, "General Info", 'Overwriting existing data')
-                    else:
-                        QMessageBox.information(None, "General Info", 'Not overwriting existing data, only adding')
-                        overwritedata=2
-
-                    notupdatedcount = 0
-                    updatedcount = 0
-                    insertcount = 0
-                    Imupload=[]
-                    try:
-                        n=0
-                        #add progress bar
-                        self.pgr.label.setText("Uploading...")
-                        self.pgr.show()
-                        self.completed = 0
-                        cur=conn.cursor()
-                        for i in range(0, (len(obj['ImageID']))):
-                            try:
-                                if overwritedata == 1:
-                                    cur.execute("select exists(SELECT imageid FROM " + DB_table + " WHERE imageid = %s)",(obj['ImageID'][i],))
-                                    if cur.fetchone()[0] is True:
-                                        Imupload.append("Updated")
-                                        updatedcount = updatedcount + 1
-                                        strengen = ("""update """ + DB_table + """ set imageid = '""" + str(obj['ImageID'][i]) + """',easting = '""" + str(obj['Easting'][i]) + """', northing = '""" + str(obj['Northing'][i]) + """',
-                                                    height = '""" + str(obj['Height'][i]) + """', omega = '""" + str(obj['Omega'][i]) + """', phi = '""" + str(obj['Phi'][i]) + """', kappa = '""" + str(obj['Kappa'][i]) + """',
-                                                    timeutc = '""" + str(obj['TimeUTC'][i]) + """', cameraid = '""" + str(obj['CameraID'][i]) + """', height_eli = '""" + str(obj['Height_Eli'][i]) + """',
-                                                    timecet = '""" + str(obj['TimeCET'][i]) + """', \"references\" = '""" + str(obj['ReferenceS'][i]) + """', producer = '""" + str(obj['Producer'][i]) + """', level = '""" + str(obj['Level'][i]) + """', comment_gs = '""" + str(obj['Comment_GS'][i]) + """', 
-                                                    comment_co = '""" + str(obj['Comment_co'][i]) + """', status = '""" + str(obj['Status'][i]) + """', gsd = '""" + str(obj['GSD'][i]) + """' where imageid =""" + """'""" + str(obj['ImageID'][i]) + """'""")
-                                        cur.execute(strengen)
-                                    else:
-                                        Imupload.append("Did not exists in table - inserted")
-                                        notupdatedcount = notupdatedcount + 1
-                                        cur.execute("""INSERT INTO """ + DB_table + """  ("imageid","easting","northing","height","omega","phi","kappa","timeutc","cameraid",
-                                                                    "height_eli","timecet",\"references\","producer","level","comment_co","comment_gs","status","gsd","geom") VALUES(%(str1)s,%(float1)s,%(float2)s,%(real3)s,%(str2)s,
-                                                                    %(str3)s,%(str4)s,%(str6)s,%(str7)s,%(real5)s,%(str8)s,%(str9)s,%(str10)s,%(str11)s,%(str12)s,%(str13)s,%(str14)s,%(str15)s,ST_GeomFromText(%(str16)s,25832))""",
-                                                    {'str1': obj['ImageID'][i], 'float1': obj['Easting'][i],
-                                                     'float2': obj['Northing'][i],
-                                                     'real3': obj['Height'][i],
-                                                     'str2': obj['Omega'][i], 'str3': obj['Phi'][i],
-                                                     'str4': obj['Kappa'][i],
-                                                     'str6': obj['TimeUTC'][i], 'str7': obj['CameraID'][i],
-                                                     'real5': str(obj['Height_Eli'][i]), 'str8': obj['TimeCET'][i],
-                                                     'str9': obj['ReferenceS'][i], 'str10': obj['Producer'][i],
-                                                     'str11': obj['Level'][i],
-                                                     'str12': str(obj['Comment_co'][i]),
-                                                     'str13': str(obj['Comment_GS'][i]),
-                                                     'str14': str(obj['Status'][i]), 'str15': str(obj['GSD'][i]),
-                                                     'str16': str('POINT((' + finallist[i] + '))')})
-
-                                elif overwritedata == 2:
-                                    cur.execute("select exists(SELECT imageid FROM " + DB_table + " WHERE imageid = %s)",(obj['ImageID'][i],))
-                                    if cur.fetchone()[0] is False:
-                                        Imupload.append("Inserted")
-                                        insertcount = insertcount + 1
-                                        cur.execute("""INSERT INTO """ + DB_table + """  ("imageid","easting","northing","height","omega","phi","kappa","timeutc","cameraid",
-                                                                    "height_eli","timecet",\"references\","producer","level","comment_co","comment_gs","status","gsd","geom") VALUES(%(str1)s,%(float1)s,%(float2)s,%(real3)s,%(str2)s,
-                                                                    %(str3)s,%(str4)s,%(str6)s,%(str7)s,%(real5)s,%(str8)s,%(str9)s,%(str10)s,%(str11)s,%(str12)s,%(str13)s,%(str14)s,%(str15)s,ST_GeomFromText(%(str16)s,25832))""",
-                                                    {'str1': obj['ImageID'][i], 'float1': obj['Easting'][i],
-                                                     'float2': obj['Northing'][i],
-                                                     'real3': obj['Height'][i],
-                                                     'str2': obj['Omega'][i], 'str3': obj['Phi'][i],
-                                                     'str4': obj['Kappa'][i],
-                                                     'str6': obj['TimeUTC'][i], 'str7': obj['CameraID'][i],
-                                                     'real5': str(obj['Height_Eli'][i]), 'str8': obj['TimeCET'][i],
-                                                     'str9': obj['ReferenceS'][i], 'str10': obj['Producer'][i],
-                                                     'str11': obj['Level'][i],
-                                                     'str12': str(obj['Comment_co'][i]),
-                                                     'str13': str(obj['Comment_GS'][i]),
-                                                     'str14': str(obj['Status'][i]), 'str15': str(obj['GSD'][i]),
-                                                     'str16': str('POINT((' + finallist[i] + '))')})
-                                    else:
-                                        Imupload.append(" Not inserted - already exists")
-                                        pass
-                                self.completed = float((n * 100) / len(obj['ImageID']))
-                                self.pgr.progressBar.setValue(self.completed)
-                                if self.completed == 100:
-                                    time.sleep(1)
-                                    self.pgr.close()
-                            except psycopg2.IntegrityError:
-                                conn.rollback()
-                                print 'commit error - rolling back'
-                            else:
-                                conn.commit()
-                    except Exception, e:
-                        QMessageBox.information(None, "General Info", 'ERROR:', e[0])
-
-                    # add a feature
-                    for i in range(0, len(finallist)):
-                        newfeat = QgsFeature()
-                        newfeat.setGeometry(QgsGeometry.fromPolygon(list[i]))
-                        try:
-                            newfeat.setAttributes([obj['ImageID'][i] , Imupload[i]])
-                        except (RuntimeError, TypeError, NameError, ValueError):
-                            QMessageBox.information(None, "General Error", "PPC Format errors found, exiting!")
-                            return
-                        pr.addFeatures([newfeat])
-
-                    # update layer's extent when new features have been added
-                    # because change of extent in provider is not propagated to the layer
-                    vl.updateExtents()
-                    vl.updateFields()
-                    QgsMapLayerRegistry.instance().addMapLayer(vl)
-
-                    rapporten = "Upload of: \n" + inputFilNavn + "\n \nINFO: \n"
-                    if overwritedata == 1:
-                        rapporten= rapporten + str(updatedcount) + ' updated \n'
-                        if notupdatedcount != 0:
-                            rapporten= rapporten + str(notupdatedcount) + ' Did not exsist in table - inserted'
-                    elif overwritedata == 2:
-                        rapporten= str(insertcount) + ' inserted'
-
-                    rapporten = rapporten + "\n See rapport file for specifics"
-                    QMessageBox.information(None, "Upload-DB", rapporten)
-
     def checkA( self ):
         inputFilNavnPPC = unicode( self.dlg.inShapeAPPC.currentText() )
-        inputFilNavnDB = unicode( self.dlg.inShapeDB.currentText() )
-        inputFilNavnImage = unicode( self.dlg.inShapeAImage.currentText() )
         canvas = self.iface.mapCanvas()
         allLayers = canvas.layers()
 
@@ -597,16 +199,7 @@ class PPC_check:
                     self.dlg.useSelectedAPPC.setCheckState( Qt.Checked )
                 else:
                     self.dlg.useSelectedAPPC.setCheckState( Qt.Unchecked )
-            elif(i.name() == inputFilNavnImage):
-                if i.selectedFeatureCount() != 0:
-                    self.dlg.useSelectedAImage.setCheckState( Qt.Checked )
-                else:
-                    self.dlg.useSelectedAImage.setCheckState( Qt.Unchecked )
-            elif(i.name() == inputFilNavnDB):
-                if i.selectedFeatureCount() != 0:
-                    self.dlg.useSelectedDB.setCheckState( Qt.Checked )
-                else:
-                    self.dlg.useSelectedDB.setCheckState( Qt.Unchecked )
+
 
     def changed(self, inputLayer):
         changedLayer = self.dlg.getVectorLayerByNam(inputLayer)
@@ -692,27 +285,6 @@ class PPC_check:
                 continue
         return caminfo
 
-    def readdata(self, filedir):
-        result = []
-        fname = filedir
-        pth1 = os.listdir(fname)[0]
-        pth2 = os.listdir(fname)
-        pth3 = os.listdir(fname + '/' + str(pth1))[0]
-        tt = os.listdir(fname + '/' + str(pth1) + '/' + str(pth3))
-        if tt[0].endswith('.jpg'):
-            var = '.jpg'
-        elif tt[0].endswith('.tif'):
-            var = '.tif'
-
-        for folder in pth2:
-            for x in os.listdir(fname + '/' + str(folder)):
-                resultImage = [os.path.join(dp, f) for dp, dn, filenames in
-                               os.walk(fname + '/' + str(folder) + '/' + str(x)) for f in filenames if
-                               os.path.splitext(f)[1] == var]
-                for i in resultImage:
-                    i = i.replace("\\", "/")
-                    result.append(str(i))
-        return result
 
     def utmToLatLng(self, zone, easting, northing, northernHemisphere=True):
         import math
@@ -815,299 +387,269 @@ class PPC_check:
             lyr_list.append(layer.name())
         self.dlg.inShapeAPPC.clear()
         self.dlg.inShapeAPPC.addItems(lyr_list)
-        self.dlg.inShapeAImage.clear()
-        self.dlg.inShapeAImage.addItems(DB_list)
-        self.dlg.inShapeDB.clear()
-        self.dlg.inShapeDB.addItems(lyr_list)
 
         result = self.dlg.exec_()
-        currentIndex = self.dlg.tabWidget.currentIndex()
         # See if OK was pressed
         if result:
-            if str(currentIndex) == "0":
-                import subprocess
-                inputLayer = unicode(self.dlg.inShapeAPPC.currentText())
-                WantedCamPath = str(self.dlg.lineEditCamDir.text())
+            import subprocess
+            inputLayer = unicode(self.dlg.inShapeAPPC.currentText())
+            WantedCamPath = str(self.dlg.lineEditCamDir.text())
 
-                caminfo = self.readCameras(WantedCamPath)
+            caminfo = self.readCameras(WantedCamPath)
 
-                inputFilNavn = self.dlg.inShapeAPPC.currentText()
+            inputFilNavn = self.dlg.inShapeAPPC.currentText()
 
-                canvas = self.iface.mapCanvas()
-                allLayers = canvas.layers()
+            canvas = self.iface.mapCanvas()
+            allLayers = canvas.layers()
 
-                try:
-                    count = 0
+            try:
+                count = 0
+                for i in allLayers:
+                    #QMessageBox.information(None, "status",i.name())
+                    if(i.name() == inputFilNavn):
+                        layer=i
 
-                    for i in allLayers:
-                        #QMessageBox.information(None, "status",i.name())
-                        if(i.name() == inputFilNavn):
-                            layer=i
+                        # Check fileformat conformity
+                        if self.dlg.checkBoxFile.isChecked():
+                            n=0
+                            features = layer.getFeatures()
+                            f = features.next()
+                            AttributesList = [c.name() for c in f.fields().toList()]
+                            if self.dlg.radioButtonPPC_ob.isChecked():
+                                PossibleValues = ['ImageID','Easting','Northing','Height','Omega','Phi','Kappa','Direction','TimeUTC','CameraID','ConeID','EstAcc','Height_Eli','TimeCET','ReferenceS','Producer','Level','Comment_Co','Comment_GS','Status','GSD']
+                            elif self.dlg.radioButtonPPC_Nadir.isChecked():
+                                PossibleValues = ['ImageID','Easting','Northing','Height','Omega','Phi','Kappa','TimeUTC','CameraID','Height_Eli','TimeCET','ReferenceS','Producer','Level','Comment_Co','Comment_GS','Status','GSD']
 
-                            # Check fileformat conformity
-                            if self.dlg.checkBoxFile.isChecked():
-                                n=0
-                                features = layer.getFeatures()
-                                f = features.next()
-                                AttributesList = [c.name() for c in f.fields().toList()]
+                            for s in PossibleValues:
+                                if s in AttributesList:
+                                    n = n + 1
+                            ld1 = len(AttributesList)-n
+                            ld2 = n-len(AttributesList)
+                            if ld1 >= 0:
+                                NameFailCount = 0
+                                #QMessageBox.information(None, "status", "File conforms to SDFE standard!")
+                            elif len(AttributesList) < n:
                                 if self.dlg.radioButtonPPC_ob.isChecked():
-                                    PossibleValues = ['ImageID','Easting','Northing','Height','Omega','Phi','Kappa','Direction','TimeUTC','CameraID','ConeID','EstAcc','Height_Eli','TimeCET','ReferenceS','Producer','Level','Comment_Co','Comment_GS','Status','GSD']
+                                    QMessageBox.information(None, "status", "Files is missing some attributes. \n Check that the following fields are pressent in the attributes table header: \n 'ImageID','Easting','Northing','Height','Omega','Phi','Kappa','Direction','TimeUTC','CameraID','ConeID','EstAcc','Height_Eli',\n'TimeCET','ReferenceS','Producer','Level','Comment_Co','Comment_GS','Status','GSD'" )
                                 elif self.dlg.radioButtonPPC_Nadir.isChecked():
-                                    PossibleValues = ['ImageID','Easting','Northing','Height','Omega','Phi','Kappa','TimeUTC','CameraID','Height_Eli','TimeCET','ReferenceS','Producer','Level','Comment_Co','Comment_GS','Status','GSD']
-
-                                for s in PossibleValues:
-                                    if s in AttributesList:
-                                        n = n + 1
-                                ld1 = len(AttributesList)-n
-                                ld2 = n-len(AttributesList)
-                                if ld1 >= 0:
-                                    NameFailCount = 0
-                                    #QMessageBox.information(None, "status", "File conforms to SDFE standard!")
-                                elif len(AttributesList) < n:
-                                    if self.dlg.radioButtonPPC_ob.isChecked():
-                                        QMessageBox.information(None, "status", "Files is missing some attributes. \n Check that the following fields are pressent in the attributes table header: \n 'ImageID','Easting','Northing','Height','Omega','Phi','Kappa','Direction','TimeUTC','CameraID','ConeID','EstAcc','Height_Eli',\n'TimeCET','ReferenceS','Producer','Level','Comment_Co','Comment_GS','Status','GSD'" )
-                                    elif self.dlg.radioButtonPPC_Nadir.isChecked():
-                                        QMessageBox.information(None, "status", "Files is missing some attributes. \n Check that the following fields are pressent in the attributes table header: \n 'ImageID','Easting','Northing','Height','Omega','Phi','Kappa','TimeUTC','CameraID','Height_Eli',\n'TimeCET','ReferenceS','Producer','Level','Comment_Co','Comment_GS','Status'")
-                                    return
-                                else:
-                                    NameFailCount = len(ld1)
-                                    whatfailed = "The following attributes did not conrform to standard: \n"
-                                    for x in range(0, NameFailCount):
-                                         whatfailed = whatfailed + "Value in File:\t \t" + ld2[x]  + "\n SDFE Standard:\t" + ld1[x] + "\n \n"
-                                    QMessageBox.information(None, "status", "File does not conforms to SDFE standard! PPC Check aborted \n \n" + whatfailed)
-                                    return
-
-                            # create virtual layer
-                            vl = QgsVectorLayer("Point", "PPC-check: "+str(inputFilNavn), "memory")
-                            pr = vl.dataProvider()
-                            commentCount = 0
-                            GSDfailCount = 0
-                            SUNfailCount = 0
-                            TILTfailCount = 0
-                            REFfailCount = 0
-                            FeatFailCount = 0
-                            #vl.startEditing()
-                            # add fields
-                            pr.addAttributes([ QgsField("ImageID", QVariant.String),
-                                                QgsField("GSD",  QVariant.String),
-                                                QgsField("SunAngle", QVariant.String),
-                                                QgsField("SunCheck", QVariant.String),
-                                                QgsField("Overlap", QVariant.String),
-                                                QgsField("Tilt", QVariant.String),
-                                                QgsField("RefSys", QVariant.String),
-                                                QgsField("NameFormat", QVariant.String),
-                                                QgsField("Orientation", QVariant.String)])
-
-                            if self.dlg.useSelectedAPPC.isChecked():
-                                selection = layer.selectedFeatures()
+                                    QMessageBox.information(None, "status", "Files is missing some attributes. \n Check that the following fields are pressent in the attributes table header: \n 'ImageID','Easting','Northing','Height','Omega','Phi','Kappa','TimeUTC','CameraID','Height_Eli',\n'TimeCET','ReferenceS','Producer','Level','Comment_Co','Comment_GS','Status'")
+                                return
                             else:
-                                selection = layer.getFeatures()
-                            cc=0
-                            for feat in selection:
-                                cc+=1
+                                NameFailCount = len(ld1)
+                                whatfailed = "The following attributes did not conrform to standard: \n"
+                                for x in range(0, NameFailCount):
+                                     whatfailed = whatfailed + "Value in File:\t \t" + ld2[x]  + "\n SDFE Standard:\t" + ld1[x] + "\n \n"
+                                QMessageBox.information(None, "status", "File does not conforms to SDFE standard! PPC Check aborted \n \n" + whatfailed)
+                                return
 
-                            if self.dlg.useSelectedAPPC.isChecked():
-                                selection = layer.selectedFeatures()
-                                QMessageBox.information(None, "status", "checking selected features")
-                            else:
-                                selection = layer.getFeatures()
-                                QMessageBox.information(None, "status", "checking all features")
+                        # create virtual layer
+                        vl = QgsVectorLayer("Point", "PPC-check: "+str(inputFilNavn), "memory")
+                        pr = vl.dataProvider()
+                        commentCount = 0
+                        GSDfailCount = 0
+                        SUNfailCount = 0
+                        TILTfailCount = 0
+                        REFfailCount = 0
+                        FeatFailCount = 0
+                        #vl.startEditing()
+                        # add fields
+                        pr.addAttributes([ QgsField("ImageID", QVariant.String),
+                                            QgsField("GSD",  QVariant.String),
+                                            QgsField("SunAngle", QVariant.String),
+                                            QgsField("SunCheck", QVariant.String),
+                                            QgsField("Overlap", QVariant.String),
+                                            QgsField("Tilt", QVariant.String),
+                                            QgsField("RefSys", QVariant.String),
+                                            QgsField("NameFormat", QVariant.String),
+                                            QgsField("Orientation", QVariant.String)])
 
-                            # Define features for name-format checker
-                            FeatIIDFailCount = 0
-                            FeatTimeFailCount = 0
-                            FeatCamFailCount = 0
-                            FeatOrientationFail = 0
-                            kappacount = 0
-                            fiveinarow = 0
-                            nn=0
-                            for feat in selection:
-                                nn+=1
-                                geom = feat.geometry().centroid()
-                                Geometri = geom.asPoint()
-                                ImageID = feat['ImageID']
+                        if self.dlg.useSelectedAPPC.isChecked():
+                            selection = layer.selectedFeatures()
+                        else:
+                            selection = layer.getFeatures()
+                        cc=0
+                        for feat in selection:
+                            cc+=1
 
-                                # General checks
-                                producent = str(feat['Producer'])
-                                kommentar = str(feat['COMMENT_CO'])
-                                Kamera = feat['CameraID']
-                                fundet = False
-                                for kam in caminfo:
-                                    if kam[0] == Kamera:
-                                        CAM_ID = kam[0]
-                                        PIXEL_SIZE = kam[1]
-                                        PRINCIPAL_DISTANCE = kam[2]
-                                        fundet = True
-                                if fundet == False:
-                                    QMessageBox.information(None, "General Error", "Camera ["+Kamera+"] not found in calibration folder, exiting!")
+                        if self.dlg.useSelectedAPPC.isChecked():
+                            selection = layer.selectedFeatures()
+                            QMessageBox.information(None, "status", "checking selected features")
+                        else:
+                            selection = layer.getFeatures()
+                            QMessageBox.information(None, "status", "checking all features")
+
+                        # Define features for name-format checker
+                        FeatIIDFailCount = 0
+                        FeatTimeFailCount = 0
+                        FeatCamFailCount = 0
+                        FeatOrientationFail = 0
+                        kappacount = 0
+                        fiveinarow = 0
+                        nn=0
+                        for feat in selection:
+                            nn+=1
+                            geom = feat.geometry().centroid()
+                            Geometri = geom.asPoint()
+                            ImageID = feat['ImageID']
+
+                            # General checks
+                            producent = str(feat['Producer'])
+                            kommentar = str(feat['COMMENT_CO'])
+                            Kamera = feat['CameraID']
+                            fundet = False
+                            for kam in caminfo:
+                                if kam[0] == Kamera:
+                                    CAM_ID = kam[0]
+                                    PIXEL_SIZE = kam[1]
+                                    PRINCIPAL_DISTANCE = kam[2]
+                                    fundet = True
+                            if fundet == False:
+                                QMessageBox.information(None, "General Error", "Camera ["+Kamera+"] not found in calibration folder, exiting!")
+                                return
+
+                            if (len(kommentar)>4):
+                            # if (kommentar != '' and kommentar!='NULL'):
+                                commentCount = commentCount + 1
+
+                            # Check GSD
+                            GSDpass = 'Not validated'
+                            if self.dlg.checkBoxGSD.isChecked():
+                                try:
+                                    Ele = float(feat['Height'])
+                                    WantedGSD = float(self.dlg.lineEditGSD.text())
+                                    calculatedGSD = ((float(Ele)*float(PIXEL_SIZE))/float(PRINCIPAL_DISTANCE)/1000)-0.01
+
+                                    if WantedGSD<calculatedGSD:
+                                        GSDpass = 'Failed'
+                                        GSDfailCount = GSDfailCount + 1
+                                    else:
+                                        GSDpass = "OK"
+                                except (RuntimeError, TypeError, NameError, ValueError):
+                                    QMessageBox.information(None, "General Error", "Error in elevation format, exiting!")
                                     return
 
-                                if (len(kommentar)>4):
-                                # if (kommentar != '' and kommentar!='NULL'):
-                                    commentCount = commentCount + 1
+                            #check sun angle
+                            SUNpass = 'Not validated'
+                            solVinkelen = []
+                            if (self.dlg.checkBoxSun.isChecked()):
+                                try:
+                                    Zon = 32
+                                    posX = feat['Easting']
+                                    posY = feat['Northing']
+                                    datotiden = feat['TimeUTC'].replace('T',' ').replace('60','59')
 
-                                # Check GSD
-                                GSDpass = 'Not validated'
-                                if self.dlg.checkBoxGSD.isChecked():
-                                    try:
-                                        Ele = float(feat['Height'])
-                                        WantedGSD = float(self.dlg.lineEditGSD.text())
-                                        calculatedGSD = ((float(Ele)*float(PIXEL_SIZE))/float(PRINCIPAL_DISTANCE)/1000)-0.01
+                                    lati = self.utmToLatLng(Zon,posX,posY, True)[0]
+                                    longi = self.utmToLatLng(Zon,posX,posY, True)[1]
 
-                                        if WantedGSD<calculatedGSD:
-                                            GSDpass = 'Failed'
-                                            GSDfailCount = GSDfailCount + 1
+                                    solVinkelen = self.sunAngle(datotiden,lati,longi)
+                                    WantedSUN = float(self.dlg.lineEditSUN.text())
+
+                                    if (solVinkelen<WantedSUN):
+                                        SUNpass = 'Failed'
+                                        SUNfailCount = SUNfailCount+1
+                                    else:
+                                        SUNpass = 'OK'
+                                except (RuntimeError, TypeError, NameError, ValueError):
+                                    QMessageBox.information(None, "General Error", "Error in Time format. \n  Time read: "+feat['TimeUTC']+"\n  Should be: YYYY-MM-DDTHH:MM:SS.SSS \n \nExiting!")
+                                    return
+
+                            #check name format
+                            NameFormat = 'Not Checked'
+                            Orientation = ''
+                            if (self.dlg.checkBoxFormat.isChecked()):
+                                try:
+                                    patternImageIDGeoDK = re.compile("\w{0,1}[0-9]{4}_[0-9]{2}_[0-9]{2}_\d+_[0-9]{4}")
+                                    patternImageIDoblique = re.compile("[0-9]{4}_[0-9]{2}_[0-9]{2}_\d+_[0-9]{4}_[0-9]{8}")
+                                    patternTime = re.compile("[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}.{0,1}[0-9]{0,3}")
+                                    patternKappa = re.compile("-?[\d]+.[0-9]{3}[0]")
+
+                                    kappa = feat['Kappa']
+                                    Time1 = feat['TimeUTC']
+                                    Time2 = feat['TimeCET']
+                                    ImageID = feat['ImageID']
+                                    if self.dlg.radioButtonPPC_Nadir.isChecked():
+                                        patternImageID=patternImageIDGeoDK
+                                    elif self.dlg.radioButtonPPC_ob.isChecked():
+                                        patternImageID=patternImageIDoblique
+                                    if self.dlg.checkBoxPic.isChecked():
+                                        if patternImageID.match(ImageID):
+                                            FeatIIDFailCount = 0
+                                            NameFormat1 = '  ImageID-OK  '
                                         else:
-                                            GSDpass = "OK"
-                                    except (RuntimeError, TypeError, NameError, ValueError):
-                                        QMessageBox.information(None, "General Error", "Error in elevation format, exiting!")
-                                        return
-
-                                #check sun angle
-                                SUNpass = 'Not validated'
-                                solVinkelen = []
-                                if (self.dlg.checkBoxSun.isChecked()):
-                                    try:
-                                        Zon = 32
-                                        posX = feat['Easting']
-                                        posY = feat['Northing']
-                                        datotiden = feat['TimeUTC'].replace('T',' ').replace('60','59')
-
-                                        lati = self.utmToLatLng(Zon,posX,posY, True)[0]
-                                        longi = self.utmToLatLng(Zon,posX,posY, True)[1]
-
-                                        solVinkelen = self.sunAngle(datotiden,lati,longi)
-                                        WantedSUN = float(self.dlg.lineEditSUN.text())
-
-                                        if (solVinkelen<WantedSUN):
-                                            SUNpass = 'Failed'
-                                            SUNfailCount = SUNfailCount+1
-                                        else:
-                                            SUNpass = 'OK'
-                                    except (RuntimeError, TypeError, NameError, ValueError):
-                                        QMessageBox.information(None, "General Error", "Error in Time format. \n  Time read: "+feat['TimeUTC']+"\n  Should be: YYYY-MM-DDTHH:MM:SS.SSS \n \nExiting!")
-                                        return
-
-                                #check name format
-                                NameFormat = 'Not Checked'
-                                Orientation = ''
-                                if (self.dlg.checkBoxFormat.isChecked()):
-                                    try:
-                                        patternImageIDGeoDK = re.compile("\w{0,1}[0-9]{4}_[0-9]{2}_[0-9]{2}_\d+_[0-9]{4}")
-                                        patternImageIDoblique = re.compile("[0-9]{4}_[0-9]{2}_[0-9]{2}_\d+_[0-9]{4}_[0-9]{8}")
-                                        patternTime = re.compile("[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}.{0,1}[0-9]{0,3}")
-                                        patternKappa = re.compile("-?[\d]+.[0-9]{3}[0]")
-
-                                        kappa = feat['Kappa']
-                                        Time1 = feat['TimeUTC']
-                                        Time2 = feat['TimeCET']
-                                        ImageID = feat['ImageID']
-                                        if self.dlg.radioButtonPPC_Nadir.isChecked():
-                                            patternImageID=patternImageIDGeoDK
-                                        elif self.dlg.radioButtonPPC_ob.isChecked():
-                                            patternImageID=patternImageIDoblique
-                                        if self.dlg.checkBoxPic.isChecked():
-                                            if patternImageID.match(ImageID):
-                                                FeatIIDFailCount = 0
-                                                NameFormat1 = '  ImageID-OK  '
-                                            else:
-                                                FeatIIDFailCount = FeatIIDFailCount+1
-                                                NameFormat1 = '  ImageID-Fail  '
-                                        else:
-                                            NameFormat1 = '  ImageID-not checked  '
-                                        if patternTime.match(str(Time1)):
+                                            FeatIIDFailCount = FeatIIDFailCount+1
+                                            NameFormat1 = '  ImageID-Fail  '
+                                    else:
+                                        NameFormat1 = '  ImageID-not checked  '
+                                    if patternTime.match(str(Time1)):
+                                        FeatTimeFailCount = 0
+                                        if patternTime.match(str(Time2)):
                                             FeatTimeFailCount = 0
-                                            if patternTime.match(str(Time2)):
-                                                FeatTimeFailCount = 0
-                                                NameFormat2 = '  TimeCET,TimeUTC-OK  '
-                                            else:
-                                                FeatTimeFailCount = FeatTimeFailCount+1
-                                                NameFormat2 = '  TimeCET-Fail,TimeUTC-OK  '
+                                            NameFormat2 = '  TimeCET,TimeUTC-OK  '
                                         else:
-                                            if patternTime.match(Time2):
-                                                FeatTimeFailCount = FeatTimeFailCount+1
-                                                NameFormat2 = '  TimeCET-OK,TimeUTC-Fail  '
-                                            else:
-                                                FeatTimeFailCount = FeatTimeFailCount+2
-                                                NameFormat2 = '  TimeCET,TimeUTC-Fail  '
-
-                                        if CAM_ID == feat['CameraID']:
-                                            FeatCamFailCount = 0
-                                            NameFormat3 = '  CameraID-OK  '
+                                            FeatTimeFailCount = FeatTimeFailCount+1
+                                            NameFormat2 = '  TimeCET-Fail,TimeUTC-OK  '
+                                    else:
+                                        if patternTime.match(Time2):
+                                            FeatTimeFailCount = FeatTimeFailCount+1
+                                            NameFormat2 = '  TimeCET-OK,TimeUTC-Fail  '
                                         else:
-                                            FeatCamFailCount = FeatCamFailCount+1
-                                            NameFormat3 = '  CameraID-Fail  '
+                                            FeatTimeFailCount = FeatTimeFailCount+2
+                                            NameFormat2 = '  TimeCET,TimeUTC-Fail  '
 
-                                        if kappacount > 5:
-                                            fiveinarow = 1
-                                        else: pass
+                                    if CAM_ID == feat['CameraID']:
+                                        FeatCamFailCount = 0
+                                        NameFormat3 = '  CameraID-OK  '
+                                    else:
+                                        FeatCamFailCount = FeatCamFailCount+1
+                                        NameFormat3 = '  CameraID-Fail  '
 
-                                        if ((str(kappa) == "NULL") or (str(kappa) == "")):
-                                            #QMessageBox.information(None, "General Error", "1")
-                                            NameFormat4 = ' '
+                                    if kappacount > 5:
+                                        fiveinarow = 1
+                                    else: pass
+
+                                    if ((str(kappa) == "NULL") or (str(kappa) == "")):
+                                        #QMessageBox.information(None, "General Error", "1")
+                                        NameFormat4 = ' '
+                                        kappacount = 0
+                                        pass
+                                    elif len(str(kappa)) >= 9:
+                                        kappa = "%.4f" % float(kappa)
+                                        if patternKappa.match(kappa):
+                                            FeatOrientationFail = FeatOrientationFail+1
+                                            kappacount = kappacount + 1
+                                            NameFormat4 = '  Kappa - suspicious length:  '
+                                        else:
+                                            NameFormat4 = 'Kappa '
                                             kappacount = 0
-                                            pass
-                                        elif len(str(kappa)) >= 9:
-                                            kappa = "%.4f" % float(kappa)
-                                            if patternKappa.match(kappa):
-                                                FeatOrientationFail = FeatOrientationFail+1
-                                                kappacount = kappacount + 1
-                                                NameFormat4 = '  Kappa - suspicious length:  '
-                                            else:
-                                                NameFormat4 = 'Kappa '
-                                                kappacount = 0
+                                    else:
+                                        kappa = "%.4f" % float(kappa)
+                                        if patternKappa.match(kappa):
+                                            FeatOrientationFail = FeatOrientationFail+1
+                                            kappacount = kappacount +1
+                                            NameFormat4 = '  Kappa - maybe truncated:  '
                                         else:
-                                            kappa = "%.4f" % float(kappa)
-                                            if patternKappa.match(kappa):
-                                                FeatOrientationFail = FeatOrientationFail+1
-                                                kappacount = kappacount +1
-                                                NameFormat4 = '  Kappa - maybe truncated:  '
-                                            else:
-                                                NameFormat4 = 'Kappa '
-                                                kappacount = 0
+                                            NameFormat4 = 'Kappa '
+                                            kappacount = 0
 
 
-                                    except (RuntimeError, TypeError, NameError, ValueError):
-                                        QMessageBox.information(None, "General Error", "Error in name format!")
-                                        return
-                                    FeatFailCount = FeatIIDFailCount + FeatTimeFailCount + FeatCamFailCount
-                                    NameFormat = NameFormat1+NameFormat2 + NameFormat3
-                                    Orientation = NameFormat4
+                                except (RuntimeError, TypeError, NameError, ValueError):
+                                    QMessageBox.information(None, "General Error", "Error in name format!")
+                                    return
+                                FeatFailCount = FeatIIDFailCount + FeatTimeFailCount + FeatCamFailCount
+                                NameFormat = NameFormat1+NameFormat2 + NameFormat3
+                                Orientation = NameFormat4
 
-                                #Check Overlap
-                                #if (self.dlg.checkBoxOverlap.isChecked()):
-                                    #doo something
-                                #    OLAPfailCount = 0
+                            #Check Overlap
+                            #if (self.dlg.checkBoxOverlap.isChecked()):
+                                #doo something
+                            #    OLAPfailCount = 0
 
-                                #Check Tilt angles
-                                TILTpass = 'Not validated'
-                                if (self.dlg.checkBoxTilt.isChecked()):
-                                    if (self.dlg.radioButtonPPC_ob.isChecked()):
-                                        Dir = str(feat['Direction'])
-                                        if Dir=="T":
-                                            try:
-                                                Omega = feat['Omega']
-                                                Phi = feat['Phi']
-                                                MaxAcceptedTilt = float(self.dlg.lineEditTilt.text())
-
-                                                Level = int(feat['Level'])
-                                                MaxAcceptedTilt = float(self.dlg.lineEditTilt.text())
-                                                if ((str(Omega) == "NULL") or (str(Phi)=="NULL")):
-                                                    TILTpass = 'no info'
-                                                    if ( Level > 1):
-                                                        TILTfailCount = TILTfailCount+1
-
-                                                elif ((Omega > MaxAcceptedTilt) or (Phi > MaxAcceptedTilt)):
-                                                    TILTpass = 'Failed'
-                                                    TILTfailCount = TILTfailCount+1
-                                                else:
-                                                    TILTpass = 'Nadir - OK'
-                                            except (RuntimeError, TypeError, NameError, ValueError):
-                                                QMessageBox.information(None, "General Error", "Error in tilt angles, exiting!")
-                                                return
-                                        else:
-                                            pass
-                                    elif (self.dlg.radioButtonPPC_Nadir.isChecked()):
+                            #Check Tilt angles
+                            TILTpass = 'Not validated'
+                            if (self.dlg.checkBoxTilt.isChecked()):
+                                if (self.dlg.radioButtonPPC_ob.isChecked()):
+                                    Dir = str(feat['Direction'])
+                                    if Dir=="T":
                                         try:
                                             Omega = feat['Omega']
                                             Phi = feat['Phi']
@@ -1115,419 +657,223 @@ class PPC_check:
 
                                             Level = int(feat['Level'])
                                             MaxAcceptedTilt = float(self.dlg.lineEditTilt.text())
-                                            if ((str(Omega) == "NULL") or (str(Phi) == "NULL")):
+                                            if ((str(Omega) == "NULL") or (str(Phi)=="NULL")):
                                                 TILTpass = 'no info'
-                                                if (Level > 1):
-                                                    TILTfailCount = TILTfailCount + 1
+                                                if ( Level > 1):
+                                                    TILTfailCount = TILTfailCount+1
 
                                             elif ((Omega > MaxAcceptedTilt) or (Phi > MaxAcceptedTilt)):
                                                 TILTpass = 'Failed'
-                                                TILTfailCount = TILTfailCount + 1
+                                                TILTfailCount = TILTfailCount+1
                                             else:
-                                                TILTpass = 'OK'
+                                                TILTpass = 'Nadir - OK'
                                         except (RuntimeError, TypeError, NameError, ValueError):
                                             QMessageBox.information(None, "General Error", "Error in tilt angles, exiting!")
                                             return
-
-                                #Check Reference system
-                                REFpass = 'Not validated'
-                                if (self.dlg.checkBoxRef.isChecked()):
+                                    else:
+                                        pass
+                                elif (self.dlg.radioButtonPPC_Nadir.isChecked()):
                                     try:
-                                        RefS = feat['ReferenceS']
-                                        WantedREF1 = self.dlg.lineEditRef.text()
-                                        if (RefS != WantedREF1):
-                                            REFpass = 'Failed'
-                                            REFfailCount = REFfailCount+1
+                                        Omega = feat['Omega']
+                                        Phi = feat['Phi']
+                                        MaxAcceptedTilt = float(self.dlg.lineEditTilt.text())
+
+                                        Level = int(feat['Level'])
+                                        MaxAcceptedTilt = float(self.dlg.lineEditTilt.text())
+                                        if ((str(Omega) == "NULL") or (str(Phi) == "NULL")):
+                                            TILTpass = 'no info'
+                                            if (Level > 1):
+                                                TILTfailCount = TILTfailCount + 1
+
+                                        elif ((Omega > MaxAcceptedTilt) or (Phi > MaxAcceptedTilt)):
+                                            TILTpass = 'Failed'
+                                            TILTfailCount = TILTfailCount + 1
                                         else:
-                                            REFpass = 'OK'
+                                            TILTpass = 'OK'
                                     except (RuntimeError, TypeError, NameError, ValueError):
-                                        QMessageBox.information(None, "General Error", "Error in Reference format, exiting!")
+                                        QMessageBox.information(None, "General Error", "Error in tilt angles, exiting!")
                                         return
 
-                                # Check for voids
-                                if (self.dlg.checkBoxVoids.isChecked()):
-                                    if self.dlg.radioButtonPPC_Nadir.isChecked():
-                                        QMessageBox.information(None, "General Error", "Void-check option is only for Oblique!")
-                                        break
-                                    elif self.dlg.radioButtonPPC_ob.isChecked():
-                                        if nn==cc:
-                                            fname=inputLayer
-                                            try:
-                                                fname
-                                            except NameError:
-                                                self.dlg.close()
-                                            else:
-                                                pass
-                                            localpath = os.getcwd()
-                                            if os.path.exists(localpath + '\\dissolved_lyr.shp'):
-                                                try:
-                                                    QgsMapLayerRegistry.instance().removeMapLayer(lyr1)
-                                                except:
-                                                    pass
-                                                QgsVectorFileWriter.deleteShapeFile(localpath + '\\dissolved_lyr.shp')
-                                            if os.path.exists(localpath + '\\err_lyr.shp'):
-                                                try:
-                                                    QgsMapLayerRegistry.instance().removeMapLayer(err_layer)
-                                                except:
-                                                    pass
-                                                QgsVectorFileWriter.deleteShapeFile(localpath + '\\err_lyr.shp')
-
-                                            lyr = QgsVectorLayer(fname, 'Footprints', 'ogr')
-                                            general.runalg("qgis:dissolve", lyr, "False", "Direction",
-                                                           localpath + '\\dissolved_lyr.shp')
-                                            lyr1 = QgsVectorLayer(localpath + '\\dissolved_lyr.shp', 'dissolved_layer', 'ogr')
-                                            landuse = {"N": ("yellow", "North"), "S": ("darkcyan", "South"),
-                                                       "E": ("green", "East"),
-                                                       "W": ("blue", "West"), "T": ("red", "Nadir")}
-
-                                            categories = []
-                                            for NSEW, (color, label) in landuse.items():
-                                                sym = QgsSymbolV2.defaultSymbol(lyr1.geometryType())
-                                                sym.setColor(QColor(color))
-                                                category = QgsRendererCategoryV2(NSEW, sym, label)
-                                                categories.append(category)
-
-                                            field = "Direction"
-                                            renderer = QgsCategorizedSymbolRendererV2(field, categories)
-                                            lyr1.setRendererV2(renderer)
-                                            crs = lyr1.crs()
-                                            crs.createFromId(25832)
-                                            lyr1.setCrs(crs)
-                                            QgsMapLayerRegistry.instance().addMapLayer(lyr1)
-                                            #            crs = self.utils.iface.activeLayer().crs().authid()
-                                            features = lyr1.getFeatures()
-                                            layer1 = QgsVectorLayer('Polygon', 'poly1', "memory")
-                                            layer2 = QgsVectorLayer('Polygon', 'poly2', "memory")
-                                            pr1 = layer1.dataProvider()
-                                            pr2 = layer2.dataProvider()
-                                            poly1 = QgsFeature()
-                                            poly2 = QgsFeature()
-                                            for f in features:
-                                                vertices = f.geometry().asPolygon()
-                                                dir = f.attribute("Direction")
-                                                n = len(vertices)
-                                                if n == 2:
-                                                    poly1.setGeometry(QgsGeometry.fromPolygon([vertices[0]]))
-                                                    poly2.setGeometry(QgsGeometry.fromPolygon([vertices[1]]))
-                                                    pr1.addFeatures([poly1])
-                                                    pr2.addFeatures([poly2])
-                                                    layer1.updateExtents()
-                                                    layer2.updateExtents()
-                                                    QgsMapLayerRegistry.instance().addMapLayers([layer2])
-
-                                            general.runalg('qgis:addfieldtoattributestable', layer2, 'Direction', 2, 10, 7,
-                                                           'err_lyr.shp')
-                                            err_layer = QgsVectorLayer('C:\\OSGeo4W64\\bin\\err_lyr.shp', 'Error_layer', 'ogr')
-                                            # --------------------------------------------------------------------------
-                                            # only applicable for test case footprint file should be in crs 25832
-                                            # crs = err_layer.crs()
-                                            # crs.createFromId(4326)
-                                            # err_layer.setCrs(crs)
-                                            #
-                                            # ------------------------------------------------------------------------------
-                                            QgsMapLayerRegistry.instance().addMapLayers([err_layer])
-                                            QgsMapLayerRegistry.instance().removeMapLayer(layer2)
-
-                                            num = 0
-                                            features = lyr1.getFeatures()
-                                            for f in features:
-                                                vertices = f.geometry().asPolygon()
-                                                dir = f.attribute("Direction")
-                                                n = len(vertices)
-                                                if n == 2:
-                                                    num = num + 1
-                                                    # print dir,n,num
-                                                    err_layer.startEditing()
-                                                    err_layer.changeAttributeValue((num - 1), 0, dir)
-                                                    err_layer.commitChanges()
-                                            rapp = "<center>Check Complete:<center>\n" + "\n Errors, if there are any, are in the \"Error_layer\"\n with their layer orientation in the attribute table\n"
-
-                                            QMessageBox.information(self.iface.mainWindow(), 'Footprint_Void_Check', rapp)
-
-
-                                # add a feature
-                                newfeat = QgsFeature()
-                                newfeat.setGeometry(QgsGeometry.fromPoint(Geometri))
+                            #Check Reference system
+                            REFpass = 'Not validated'
+                            if (self.dlg.checkBoxRef.isChecked()):
                                 try:
-                                    newfeat.setAttributes([ImageID, GSDpass, solVinkelen, SUNpass,"",TILTpass,REFpass,NameFormat,Orientation+" : "+kappa])
+                                    RefS = feat['ReferenceS']
+                                    WantedREF1 = self.dlg.lineEditRef.text()
+                                    if (RefS != WantedREF1):
+                                        REFpass = 'Failed'
+                                        REFfailCount = REFfailCount+1
+                                    else:
+                                        REFpass = 'OK'
                                 except (RuntimeError, TypeError, NameError, ValueError):
-                                    QMessageBox.information(None, "General Error", "PPC Format errors found, exiting!")
+                                    QMessageBox.information(None, "General Error", "Error in Reference format, exiting!")
                                     return
 
-                                pr.addFeatures([newfeat])
+                            # Check for voids
+                            if (self.dlg.checkBoxVoids.isChecked()):
+                                if self.dlg.radioButtonPPC_Nadir.isChecked():
+                                    QMessageBox.information(None, "General Error", "Void-check option is only for Oblique!")
+                                    break
+                                elif self.dlg.radioButtonPPC_ob.isChecked():
+                                    if nn==cc:
+                                        fname=inputLayer
+                                        try:
+                                            fname
+                                        except NameError:
+                                            self.dlg.close()
+                                        else:
+                                            pass
+                                        localpath = os.getcwd()
+                                        if os.path.exists(localpath + '\\dissolved_lyr.shp'):
+                                            try:
+                                                QgsMapLayerRegistry.instance().removeMapLayer(lyr1)
+                                            except:
+                                                pass
+                                            QgsVectorFileWriter.deleteShapeFile(localpath + '\\dissolved_lyr.shp')
+                                        if os.path.exists(localpath + '\\err_lyr.shp'):
+                                            try:
+                                                QgsMapLayerRegistry.instance().removeMapLayer(err_layer)
+                                            except:
+                                                pass
+                                            QgsVectorFileWriter.deleteShapeFile(localpath + '\\err_lyr.shp')
 
-                            # update layer's extent when new features have been added
-                            # because change of extent in provider is not propagated to the layer
-                            vl.updateExtents()
-                            vl.updateFields()
-                            QgsMapLayerRegistry.instance().addMapLayer(vl)
+                                        lyr = QgsVectorLayer(fname, 'Footprints', 'ogr')
+                                        general.runalg("qgis:dissolve", lyr, "False", "Direction",
+                                                       localpath + '\\dissolved_lyr.shp')
+                                        lyr1 = QgsVectorLayer(localpath + '\\dissolved_lyr.shp', 'dissolved_layer', 'ogr')
+                                        landuse = {"N": ("yellow", "North"), "S": ("darkcyan", "South"),
+                                                   "E": ("green", "East"),
+                                                   "W": ("blue", "West"), "T": ("red", "Nadir")}
 
-                            rapporten = "Check of: \n"+ inputFilNavn +"\n \nThere was found: \n"
-                            if (self.dlg.checkBoxGSD.isChecked()):
-                                rapporten = rapporten + str(GSDfailCount) + " GSD errors, \n"
-                            else:
-                                rapporten = rapporten + "GSD not checked \n"
+                                        categories = []
+                                        for NSEW, (color, label) in landuse.items():
+                                            sym = QgsSymbolV2.defaultSymbol(lyr1.geometryType())
+                                            sym.setColor(QColor(color))
+                                            category = QgsRendererCategoryV2(NSEW, sym, label)
+                                            categories.append(category)
 
-                            if (self.dlg.checkBoxSun.isChecked()):
-                                rapporten = rapporten + str(SUNfailCount) + " sun angle errors \n"
-                            else:
-                                rapporten = rapporten + "sun angle not checked \n"
+                                        field = "Direction"
+                                        renderer = QgsCategorizedSymbolRendererV2(field, categories)
+                                        lyr1.setRendererV2(renderer)
+                                        crs = lyr1.crs()
+                                        crs.createFromId(25832)
+                                        lyr1.setCrs(crs)
+                                        QgsMapLayerRegistry.instance().addMapLayer(lyr1)
+                                        #            crs = self.utils.iface.activeLayer().crs().authid()
+                                        features = lyr1.getFeatures()
+                                        layer1 = QgsVectorLayer('Polygon', 'poly1', "memory")
+                                        layer2 = QgsVectorLayer('Polygon', 'poly2', "memory")
+                                        pr1 = layer1.dataProvider()
+                                        pr2 = layer2.dataProvider()
+                                        poly1 = QgsFeature()
+                                        poly2 = QgsFeature()
+                                        for f in features:
+                                            vertices = f.geometry().asPolygon()
+                                            dir = f.attribute("Direction")
+                                            n = len(vertices)
+                                            if n == 2:
+                                                poly1.setGeometry(QgsGeometry.fromPolygon([vertices[0]]))
+                                                poly2.setGeometry(QgsGeometry.fromPolygon([vertices[1]]))
+                                                pr1.addFeatures([poly1])
+                                                pr2.addFeatures([poly2])
+                                                layer1.updateExtents()
+                                                layer2.updateExtents()
+                                                QgsMapLayerRegistry.instance().addMapLayers([layer2])
 
-                            #if (self.dlg.checkBoxOverlap.isChecked()):
-                            #    rapporten = rapporten + "overlap check not available \n"
-                            #else:
-                            #    rapporten = rapporten + "overlap check not available \n"
+                                        general.runalg('qgis:addfieldtoattributestable', layer2, 'Direction', 2, 10, 7,
+                                                       'err_lyr.shp')
+                                        err_layer = QgsVectorLayer('C:\\OSGeo4W64\\bin\\err_lyr.shp', 'Error_layer', 'ogr')
+                                        # --------------------------------------------------------------------------
+                                        # only applicable for test case footprint file should be in crs 25832
+                                        # crs = err_layer.crs()
+                                        # crs.createFromId(4326)
+                                        # err_layer.setCrs(crs)
+                                        #
+                                        # ------------------------------------------------------------------------------
+                                        QgsMapLayerRegistry.instance().addMapLayers([err_layer])
+                                        QgsMapLayerRegistry.instance().removeMapLayer(layer2)
 
-                            if (self.dlg.checkBoxTilt.isChecked()):
-                                rapporten = rapporten + str(TILTfailCount) + " tilt angle errors \n"
-                            else:
-                                rapporten = rapporten + "tilt angle not checked \n"
+                                        num = 0
+                                        features = lyr1.getFeatures()
+                                        for f in features:
+                                            vertices = f.geometry().asPolygon()
+                                            dir = f.attribute("Direction")
+                                            n = len(vertices)
+                                            if n == 2:
+                                                num = num + 1
+                                                # print dir,n,num
+                                                err_layer.startEditing()
+                                                err_layer.changeAttributeValue((num - 1), 0, dir)
+                                                err_layer.commitChanges()
+                                        rapp = "<center>Check Complete:<center>\n" + "\n Errors, if there are any, are in the \"Error_layer\"\n with their layer orientation in the attribute table\n"
 
-                            if (self.dlg.checkBoxRef.isChecked()):
-                                rapporten = rapporten + str(REFfailCount) + " reference errors \n"
-                            else:
-                                rapporten = rapporten + "reference system not checked \n"
+                                        QMessageBox.information(self.iface.mainWindow(), 'Footprint_Void_Check', rapp)
 
-                            if (self.dlg.checkBoxFormat.isChecked()):
-                                rapporten = rapporten + str(FeatFailCount) + " name format errors \n"
-                            else:
-                                rapporten = rapporten + "name format not checked \n"
 
-                            if (self.dlg.checkBoxFormat.isChecked()):
-                                if fiveinarow == 1:
-                                    rapporten = rapporten + str(FeatOrientationFail) + " suspect orientation formats \n OBS - 5 suspect kappa formats in a row \n"
-                                else:
-                                    rapporten = rapporten + str(FeatOrientationFail) + " suspect orientation formats \n"
-                            else:
-                                rapporten = rapporten + "name format not checked \n"
-
-                            rapporten = rapporten + str(commentCount) +" comments from " + producent
-
-                            if GSDfailCount+SUNfailCount+TILTfailCount+REFfailCount+FeatFailCount == 0:
-                                QMessageBox.information(self.iface.mainWindow(),'PPC check',rapporten)
-                            else:
-                                QMessageBox.critical(self.iface.mainWindow(),'PPC check',rapporten)
-                            self.dlg.close()
-                            return
-                except (RuntimeError, TypeError, NameError): #, ValueError): #
-                    QMessageBox.information(None, "General Error", "General file error V2.1, please check that you have choosen the correct PPC file")
-                    return
-
-            if str(currentIndex) == "3":
-                import subprocess
-                inputLayer = unicode(self.dlg.inShapeAImage.currentText())
-                ImageDirPath = str(self.dlg.lineEditDBImageDir.text())
-                ImageDirPath = ImageDirPath.replace("\\", "/")
-                inputFilNavn = self.dlg.inShapeAImage.currentText()
-                ImageNames=[]
-                ImageID2 = []
-
-                if self.dlg.radioButtonDBQC_ob.isChecked():
-                    ImageNames = self.readdata(ImageDirPath)
-                elif self.dlg.radioButtonDBQC_Nadir.isChecked():
-                    ImageNames = os.listdir(ImageDirPath)
-                for i in ImageNames:
-                    ImageID2.append(os.path.basename(os.path.normpath(i)))
-                blok = ImageID2[0][5:10]
-
-                DB_name = self.dlg.db_name_2.text()
-                DB_host = self.dlg.db_host_2.text()
-                DB_port = self.dlg.db_port_2.text()
-                DB_user = self.dlg.db_user_2.text()
-                DB_pass = self.dlg.db_password_2.text()
-                # Herunder opsttes tabellen der skal bruges. Findes tabellen ikke allerede opretts den
-                DB_schema = "public"
-                DB_geom = "geom"
-                if self.dlg.radioButtonDBQC_ob.isChecked():
-                    DB_table = 'footprints2017'
-                elif self.dlg.radioButtonDBQC_Nadir.isChecked():
-                    DB_table = 'ppc2017'
-
-                conn = psycopg2.connect("dbname=" + DB_name + " user=" + DB_user + " host=" + DB_host + " password=" + DB_pass)
-                cur = conn.cursor()
-
-                cur.execute("select exists(select * from information_schema.tables where table_name=%s)", (DB_table,))
-                if cur.fetchone()[0]:
-                    QMessageBox.information(None, "General Info", 'Database: '+DB_table+' found \n Checking... \n\n This may take a while...')
-                else:
-                    QMessageBox.information(None, "General Info", 'Database: '+DB_table+' not found ')
-
-                ImageID = []
-                ImageID1 = []
-                East = []
-                North = []
-                Height = []
-                Omega = []
-                Phi = []
-                Kappa = []
-                TimeUTC = []
-                CameraID = []
-                Height_Eli = []
-                TimeCET = []
-                ReferenceS = []
-                Producer = []
-                Level = []
-                Comment_co = []
-                Comment_sdfe = []
-                Status = []
-                GSD = []
-
-                if self.dlg.radioButtonDBQC_ob.isChecked():
-                    Direction = []
-                    EstAcc = []
-                    coneid = []
-
-                    cur.execute('SELECT * from ' + DB_table + ' WHERE imageid LIKE \'%2017_' + blok + '%\'')
-                    rows = cur.fetchall()
-                    for row in rows:
-                        ImageID.append(row[0])
-                        East.append(row[1])
-                        North.append(row[2])
-                        Height.append(row[3])
-                        Omega.append(row[4])
-                        Phi.append(row[5])
-                        Kappa.append(row[6])
-                        Direction.append(row[7])
-                        TimeUTC.append(row[8])
-                        CameraID.append(row[9])
-                        coneid.append(row[10])
-                        EstAcc.append(row[11])
-                        Height_Eli.append(row[12])
-                        TimeCET.append(row[13])
-                        ReferenceS.append(row[14])
-                        Producer.append(row[15])
-                        Level.append(row[16])
-                        Comment_co.append(row[17])
-                        Comment_sdfe.append(row[18])
-                        Status.append(row[19])
-                        GSD.append(row[20])
-                elif self.dlg.radioButtonDBQC_Nadir.isChecked():
-                    cur.execute('SELECT * from ' + DB_table + ' WHERE imageid LIKE ' + '\'%' + blok + '%\'')
-                    ogc_id=[]
-                    rows = cur.fetchall()
-                    for row in rows:
-                        ogc_id.append(row[0])
-                        ImageID.append(row[1])
-                        East.append(row[2])
-                        North.append(row[3])
-                        Height.append(row[4])
-                        Omega.append(row[5])
-                        Phi.append(row[6])
-                        Kappa.append(row[7])
-                        TimeUTC.append(row[8])
-                        CameraID.append(row[9])
-                        Height_Eli.append(row[10])
-                        TimeCET.append(row[11])
-                        ReferenceS.append(row[12])
-                        Producer.append(row[13])
-                        Level.append(row[14])
-                        Comment_co.append(row[15])
-                        Comment_sdfe.append(row[16])
-                        Status.append(row[17])
-                        GSD.append(row[18])
-
-                for i in ImageID:
-                    if self.dlg.lineEditDBImageDir.text().endswith('TIFF'):
-                        ImageID1.append(i + ".tif")
-                    elif self.dlg.lineEditDBImageDir.text().endswith('JPEG'):
-                        ImageID1.append(i + ".jpg")
-                    else:
-                        QMessageBox.information(None, "General Error", "Choose one of the folders: Image_TIFF or Image_JPEG")
-                try:
-                    ImageDirPath = str(self.dlg.lineEditDBImageDir.text())
-                    ImageDirPath = ImageDirPath.replace("\\", "/")
-                    # create virtual layer
-                    vl = QgsVectorLayer("Point", "Image-check: " + str(ntpath.basename(ImageDirPath)), "memory")
-                    pr = vl.dataProvider()
-                    imdirpth = ntpath.basename(ImageDirPath)
-                    Comparison1 = []
-                    Comparison2 = []
-                    FP_in_IM = []
-                    FP_not_in_IM = []
-                    Images_in_FP = []
-                    Images_not_in_FP = []
-                    ImDFail = 0
-                    ImFFail = 0
-                    SizeFailCount = 0
-                    CompFailCount = 0
-
-                    for i in ImageID1:
-                        if i in ImageID2:
-                            FP_in_IM.append(i)
-                            Comparison1.append("OK - Footprint has associated Image")
-                        else:
-                            FP_not_in_IM.append(i)
-                            Comparison2.append("Fail - Footprint does not have associated Image")
-                    for i in ImageID2:
-                        if i in ImageID1:
-                            Images_in_FP.append(i)
-                            Comparison1.append("OK - Image has associated footprint")
-                        else:
-                            Images_not_in_FP.append(i)
-                            Comparison2.append("Fail - Image does not have associated footprint")
-
-                    # add fields
-                    pr.addAttributes([QgsField("ID", QVariant.String),
-                                      QgsField("ImageID", QVariant.String),
-                                      QgsField("FootprintID", QVariant.String),
-                                      QgsField("Comparison1", QVariant.String),
-                                      QgsField("Comparison2", QVariant.String)])
-                    if len(ImageID2) <= len(ImageID1):
-                        rng = len(ImageID1)
-                        dif = len(Images_in_FP)
-                    elif len(ImageID2) > len(ImageID1):
-                        rng = len(ImageID2)
-                        dif = len(FP_in_IM)
-                    FP_in_IM.sort()
-                    Images_in_FP.sort()
-                    FP_not_in_IM.sort()
-                    Images_not_in_FP.sort()
-
-                    for i in range(0, rng):
-                        # add a feature
-                        newfeat = QgsFeature()
-                        if i < dif:
+                            # add a feature
+                            newfeat = QgsFeature()
+                            newfeat.setGeometry(QgsGeometry.fromPoint(Geometri))
                             try:
-                                newfeat.setAttributes([i, FP_in_IM[i], Images_in_FP[i], Comparison1[i], Comparison1[i + dif]])
+                                newfeat.setAttributes([ImageID, GSDpass, solVinkelen, SUNpass,"",TILTpass,REFpass,NameFormat,Orientation+" : "+kappa])
                             except (RuntimeError, TypeError, NameError, ValueError):
-                                QMessageBox.information(None, "General Error", "PPC Format errors found, exiting1!")
-                        elif dif <= i < (dif + len(Images_not_in_FP)):
-                            if len(ImageID2) < len(ImageID1):
-                                try:
-                                    newfeat.setAttributes([i, Images_not_in_FP[i - dif], '', '', Comparison2[len(ImageID1) - dif]])
-                                except (RuntimeError, TypeError, NameError, ValueError):
-                                    QMessageBox.information(None, "General Error", "PPC Format errors found, exiting2!")
-                            elif len(ImageID2) > len(ImageID1):
-                                try:
-                                    newfeat.setAttributes([i, ImageID2[i], '', '', Comparison2[len(FP_not_in_IM) - 1 + i]])
-                                except (RuntimeError, TypeError, NameError, ValueError):
-                                    QMessageBox.information(None, "General Error", "PPC Format errors found, exiting3!")
+                                QMessageBox.information(None, "General Error", "PPC Format errors found, exiting!")
+                                return
+
+                            pr.addFeatures([newfeat])
+
+                        # update layer's extent when new features have been added
+                        # because change of extent in provider is not propagated to the layer
+                        vl.updateExtents()
+                        vl.updateFields()
+                        QgsMapLayerRegistry.instance().addMapLayer(vl)
+
+                        rapporten = "Check of: \n"+ inputFilNavn +"\n \nThere was found: \n"
+                        if (self.dlg.checkBoxGSD.isChecked()):
+                            rapporten = rapporten + str(GSDfailCount) + " GSD errors, \n"
                         else:
-                            if len(ImageID2) < len(ImageID1):
-                                try:
-                                    newfeat.setAttributes([i, '', FP_not_in_IM[i - dif], Comparison2[i - dif], ''])
-                                except (RuntimeError, TypeError, NameError, ValueError):
-                                    QMessageBox.information(None, "General Error", "PPC Format errors found, exiting4!")
-                            elif len(ImageID2) > len(ImageID1):
-                                try:
-                                    newfeat.setAttributes([i, '', '', '', ''])
-                                except (RuntimeError, TypeError, NameError, ValueError):
-                                    QMessageBox.information(None, "General Error", "PPC Format errors found, exiting5!")
-                        pr.addFeatures([newfeat])
+                            rapporten = rapporten + "GSD not checked \n"
 
-                    vl.updateExtents()
-                    vl.updateFields()
-                    QgsMapLayerRegistry.instance().addMapLayer(vl)
+                        if (self.dlg.checkBoxSun.isChecked()):
+                            rapporten = rapporten + str(SUNfailCount) + " sun angle errors \n"
+                        else:
+                            rapporten = rapporten + "sun angle not checked \n"
 
-                    rapportenI = "Check of: \n" + imdirpth + "\n \nThere was found: \n" + str(len(Images_not_in_FP))+" Images without associated Footprint \n"
-                    rapportenI = rapportenI + str(len(FP_not_in_IM)) + " Footprints without associated Image \n \n Images:\n"+ str(len(Images_in_FP))+" of "+str(len(ImageID2))+" - OK\n"
-                    rapportenI = rapportenI + str(len(Images_not_in_FP))+ " of "+ str(len(ImageID2))+" - Fail"
-                    if ImDFail+ImFFail+SizeFailCount+CompFailCount == 0:
-                        QMessageBox.information(self.iface.mainWindow(),'PPC check',rapportenI)
-                    else:
-                        QMessageBox.critical(self.iface.mainWindow(),'PPC check',rapportenI)
-                    self.dlg.close()
-                    return
-                except (RuntimeError, TypeError, NameError): #, ValueError):
-                    QMessageBox.information(None, "General Error", "General file error DB-tab, please check that you have choosen the correct file")
-                    return
+                        #if (self.dlg.checkBoxOverlap.isChecked()):
+                        #    rapporten = rapporten + "overlap check not available \n"
+                        #else:
+                        #    rapporten = rapporten + "overlap check not available \n"
+
+                        if (self.dlg.checkBoxTilt.isChecked()):
+                            rapporten = rapporten + str(TILTfailCount) + " tilt angle errors \n"
+                        else:
+                            rapporten = rapporten + "tilt angle not checked \n"
+
+                        if (self.dlg.checkBoxRef.isChecked()):
+                            rapporten = rapporten + str(REFfailCount) + " reference errors \n"
+                        else:
+                            rapporten = rapporten + "reference system not checked \n"
+
+                        if (self.dlg.checkBoxFormat.isChecked()):
+                            rapporten = rapporten + str(FeatFailCount) + " name format errors \n"
+                        else:
+                            rapporten = rapporten + "name format not checked \n"
+
+                        if (self.dlg.checkBoxFormat.isChecked()):
+                            if fiveinarow == 1:
+                                rapporten = rapporten + str(FeatOrientationFail) + " suspect orientation formats \n OBS - 5 suspect kappa formats in a row \n"
+                            else:
+                                rapporten = rapporten + str(FeatOrientationFail) + " suspect orientation formats \n"
+                        else:
+                            rapporten = rapporten + "name format not checked \n"
+
+                        rapporten = rapporten + str(commentCount) +" comments from " + producent
+
+                        if GSDfailCount+SUNfailCount+TILTfailCount+REFfailCount+FeatFailCount == 0:
+                            QMessageBox.information(self.iface.mainWindow(),'PPC check',rapporten)
+                        else:
+                            QMessageBox.critical(self.iface.mainWindow(),'PPC check',rapporten)
+                        self.dlg.close()
+                        return
+            except (RuntimeError, TypeError, NameError): #, ValueError): #
+                QMessageBox.information(None, "General Error", "General file error V2.1, please check that you have choosen the correct PPC file")
+                return
