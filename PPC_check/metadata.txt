@@ -10,7 +10,7 @@
 name=PPC_check
 qgisMinimumVersion=2.0
 description=Tool for checking PPC files
-version=1.6
+version=1.7
 author=www.sdfe.dk
 email=anfla@sdfe.dk, mafal@sdfe.dk
 
@@ -24,6 +24,7 @@ repository=https://github.com/Kortforsyningen/QGIS-PPC_check
 
 # Uncomment the following line and add your changelog:
 changelog=
+    2018-03-06 1.7 Plugin downgraded to only nameing and format check
     2017-07-26 1.6 Added progress bar for following upload
     2017-07-18 1.5 Fix for DB upload speed
     2017-05-31 1.4 Fix for new *.cam format
